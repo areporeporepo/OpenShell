@@ -1,0 +1,1199 @@
+
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Architecture Reference &#8212; NVIDIA OpenShell Developer Guide</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/nvidia-sphinx-theme.css?v=933278ad" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+
+
+    <script src="../_static/documentation_options.js?v=2caa9db7"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=6dbb43f8"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs";
+
+
+
+
+
+const initStyles = () => {
+    const defaultStyle = document.createElement('style');
+    defaultStyle.textContent = `pre.mermaid {
+    /* Same as .mermaid-container > pre */
+    display: block;
+    width: 100%;
+}
+
+pre.mermaid > svg {
+    /* Same as .mermaid-container > pre > svg */
+    height: 500px;
+    width: 100%;
+    max-width: 100% !important;
+}`;
+    document.head.appendChild(defaultStyle);
+
+    const fullscreenStyle = document.createElement('style');
+    fullscreenStyle.textContent = `.mermaid-container {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+
+.mermaid-container > pre {
+    display: block;
+    width: 100%;
+}
+
+.mermaid-container > pre > svg {
+    height: 500px;
+    width: 100%;
+    max-width: 100% !important;
+}
+
+.mermaid-fullscreen-btn {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    color: #333;
+}
+
+.mermaid-fullscreen-btn:hover {
+    opacity: 100% !important;
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+    transform: scale(1.1);
+}
+
+.mermaid-fullscreen-btn.dark-theme {
+    background: rgba(50, 50, 50, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #e0e0e0;
+}
+
+.mermaid-fullscreen-btn.dark-theme:hover {
+    background: rgba(60, 60, 60, 1);
+    box-shadow: 0 3px 10px rgba(255, 255, 255, 0.2);
+}
+
+.mermaid-fullscreen-modal {
+    display: none;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 95vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.98);
+    z-index: 9999;
+    padding: 20px;
+    overflow: auto;
+}
+
+.mermaid-fullscreen-modal.dark-theme {
+    background: rgba(0, 0, 0, 0.98);
+}
+
+.mermaid-fullscreen-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen {
+    position: relative;
+    width: 95vw;
+    height: 90vh;
+    max-width: 95vw;
+    max-height: 90vh;
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen.dark-theme {
+    background: #1a1a1a;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+.mermaid-container-fullscreen pre.mermaid {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen .mermaid svg {
+    height: 100% !important;
+    width: 100% !important;
+    cursor: grab;
+}
+
+.mermaid-fullscreen-close {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+    font-size: 24px;
+    line-height: 1;
+    color: #333;
+}
+
+.mermaid-fullscreen-close:hover {
+    background: white;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    transform: scale(1.1);
+}
+
+.mermaid-fullscreen-close.dark-theme {
+    background: rgba(50, 50, 50, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #e0e0e0;
+}
+
+.mermaid-fullscreen-close.dark-theme:hover {
+    background: rgba(60, 60, 60, 1);
+    box-shadow: 0 6px 16px rgba(255, 255, 255, 0.2);
+}
+
+.mermaid-fullscreen-modal .mermaid-fullscreen-btn {
+    display: none !important;
+}`;
+    document.head.appendChild(fullscreenStyle);
+}
+
+// Detect if page has dark background
+const isDarkTheme = () => {
+    // We use a set of heuristics:
+    // 1. Check for common dark mode classes or attributes
+    // 2. Check computed background color brightness
+    if (document.documentElement.classList.contains('dark') ||
+        document.documentElement.getAttribute('data-theme') === 'dark' ||
+        document.body.classList.contains('dark') ||
+        document.body.getAttribute('data-theme') === 'dark') {
+        // console.log("Dark theme detected via class/attribute");
+        return true;
+    }
+    if (document.documentElement.classList.contains('light') ||
+        document.documentElement.getAttribute('data-theme') === 'light' ||
+        document.body.classList.contains('light') ||
+        document.body.getAttribute('data-theme') === 'light') {
+        // console.log("Light theme detected via class/attribute");
+        return false;
+    }
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        // console.log("Dark theme detected via prefers-color-scheme");
+        return true;
+    }
+    const bgColor = window.getComputedStyle(document.body).backgroundColor;
+    const match = bgColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)/);
+    if (match) {
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        // console.log("Background color brightness:", brightness);
+        return brightness < 128;
+    }
+    // console.log("No dark or light theme detected, defaulting to light theme");
+    return false;
+};
+
+let darkTheme = isDarkTheme();
+let modal = null;
+let modalContent = null;
+let previousScrollOffset = [window.scrollX, window.scrollY];
+
+const runMermaid = async (rerun) => {
+    console.log("Running mermaid diagrams, rerun =", rerun);
+    // clear all existing mermaid charts
+    let all_mermaids = document.querySelectorAll(".mermaid");
+
+    if (rerun) {
+        all_mermaids.forEach((el) => {
+            if(!el.hasAttribute("data-original-code")) {
+                // store original code
+                // console.log(`Storing original code for first run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+            if(el.getAttribute("data-processed") === "true") {
+                // remove and restore original
+                el.removeAttribute("data-processed");
+                // console.log(`Restoring original code for re-run: `, el.getAttribute('data-original-code'));
+                el.innerHTML = el.getAttribute('data-original-code');
+            } else {
+                // store original code
+                // console.log(`Storing original code for re-run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+        });
+        await mermaid.run();
+    }
+
+    all_mermaids = document.querySelectorAll(".mermaid");
+    const mermaids_processed = document.querySelectorAll(".mermaid[data-processed='true']");
+
+    if ("False" === "True") {
+        const mermaids_to_add_zoom = -1 === -1 ? all_mermaids.length : -1;
+        if(mermaids_to_add_zoom > 0) {
+            var svgs = d3.selectAll("");
+            if(all_mermaids.length !== mermaids_processed.length) {
+                setTimeout(() => runMermaid(false), 200);
+                return;
+            } else if(svgs.size() !== mermaids_to_add_zoom) {
+                setTimeout(() => runMermaid(false), 200);
+                return;
+            } else {
+                svgs.each(function() {
+                    var svg = d3.select(this);
+                    svg.html("<g class='wrapper'>" + svg.html() + "</g>");
+                    var inner = svg.select("g");
+                    var zoom = d3.zoom().on("zoom", function(event) {
+                        inner.attr("transform", event.transform);
+                    });
+                    svg.call(zoom);
+                });
+            }
+        }
+    } else if(all_mermaids.length !== mermaids_processed.length) {
+        // Wait for mermaid to process all diagrams
+        setTimeout(() => runMermaid(false), 200);
+        return;
+    }
+
+    // Stop here if not adding fullscreen capability
+    if ("True" !== "True") return;
+
+    if (modal !== null ) {
+        // Destroy existing modal
+        modal.remove();
+        modal = null;
+        modalContent = null;
+    }
+
+    modal = document.createElement('div');
+    modal.className = 'mermaid-fullscreen-modal' + (darkTheme ? ' dark-theme' : '');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Fullscreen diagram viewer');
+    modal.innerHTML = `
+        <button class="mermaid-fullscreen-close${darkTheme ? ' dark-theme' : ''}" aria-label="Close fullscreen">✕</button>
+        <div class="mermaid-container-fullscreen${darkTheme ? ' dark-theme' : ''}"></div>
+    `;
+    document.body.appendChild(modal);
+
+    modalContent = modal.querySelector('.mermaid-container-fullscreen');
+    const closeBtn = modal.querySelector('.mermaid-fullscreen-close');
+
+    const closeModal = () => {
+        modal.classList.remove('active');
+        modalContent.innerHTML = '';
+        document.body.style.overflow = ''
+        window.scrollTo({left: previousScrollOffset[0], top: previousScrollOffset[1], behavior: 'instant'});
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('active')) {
+            closeModal();
+        }
+    });
+
+    document.querySelectorAll('.mermaid').forEach((mermaidDiv) => {
+        if (mermaidDiv.parentNode.classList.contains('mermaid-container') ||
+            mermaidDiv.closest('.mermaid-fullscreen-modal')) {
+            // Already processed, adjust button class if needed
+            const existingBtn = mermaidDiv.parentNode.querySelector('.mermaid-fullscreen-btn');
+            if (existingBtn) {
+                existingBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+            }
+            return;
+        }
+
+        const container = document.createElement('div');
+        container.className = 'mermaid-container';
+        mermaidDiv.parentNode.insertBefore(container, mermaidDiv);
+        container.appendChild(mermaidDiv);
+
+        const fullscreenBtn = document.createElement('button');
+        fullscreenBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+        fullscreenBtn.setAttribute('aria-label', 'View diagram in fullscreen');
+        fullscreenBtn.textContent = '⛶';
+        fullscreenBtn.style.opacity = '50%';
+
+        // Calculate dynamic position based on diagram's margin and padding
+        const diagramStyle = window.getComputedStyle(mermaidDiv);
+        const marginTop = parseFloat(diagramStyle.marginTop) || 0;
+        const marginRight = parseFloat(diagramStyle.marginRight) || 0;
+        const paddingTop = parseFloat(diagramStyle.paddingTop) || 0;
+        const paddingRight = parseFloat(diagramStyle.paddingRight) || 0;
+        fullscreenBtn.style.top = `${marginTop + paddingTop + 4}px`;
+        fullscreenBtn.style.right = `${marginRight + paddingRight + 4}px`;
+
+        fullscreenBtn.addEventListener('click', () => {
+            previousScrollOffset = [window.scroll, window.scrollY];
+            const clone = mermaidDiv.cloneNode(true);
+            modalContent.innerHTML = '';
+            modalContent.appendChild(clone);
+
+            const svg = clone.querySelector('svg');
+            if (svg) {
+                svg.removeAttribute('width');
+                svg.removeAttribute('height');
+                svg.style.width = '100%';
+                svg.style.height = 'auto';
+                svg.style.maxWidth = '100%';
+                svg.style.sdisplay = 'block';
+
+                if ("False" === "True") {
+                    setTimeout(() => {
+                        const g = svg.querySelector('g');
+                        if (g) {
+                            var svgD3 = d3.select(svg);
+                            svgD3.html("<g class='wrapper'>" + svgD3.html() + "</g>");
+                            var inner = svgD3.select("g");
+                            var zoom = d3.zoom().on("zoom", function(event) {
+                                inner.attr("transform", event.transform);
+                            });
+                            svgD3.call(zoom);
+                        }
+                    }, 100);
+                }
+            }
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+        container.appendChild(fullscreenBtn);
+    });
+};
+
+const load = async () => {
+    initStyles();
+
+    await runMermaid(true);
+
+    const reRunIfThemeChanges = async () => {
+        const newDarkTheme = isDarkTheme();
+        if (newDarkTheme !== darkTheme) {
+            darkTheme = newDarkTheme;
+            console.log("Theme change detected, re-running mermaid with", darkTheme ? "dark" : "default", "theme");
+            await mermaid.initialize(
+                {...JSON.parse(
+                    `{"startOnLoad": false}`
+                ),
+                ...{ darkMode: darkTheme, theme: darkTheme ? 'dark' : 'default' },
+                }
+            );
+            await runMermaid(true);
+        }
+    };
+
+    // Update theme classes when theme changes
+    const themeObserver = new MutationObserver(reRunIfThemeChanges);
+    themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+    themeObserver.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+};
+
+
+
+
+
+console.log("Initializing mermaid with", darkTheme ? "dark" : "default", "theme");
+mermaid.initialize(
+    {...JSON.parse(
+        `{"startOnLoad": false}`
+    ),
+    ...{ darkMode: darkTheme, theme: darkTheme ? 'dark' : 'default' },
+    }
+);
+
+window.addEventListener("load", load);</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/architecture';</script>
+
+    <link rel="icon" href="../_static/favicon.png"/>
+
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Troubleshooting" href="../troubleshooting.html" />
+    <link rel="prev" title="Policy Schema Reference" href="policy-schema.html" />
+
+
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+
+
+  </head>
+
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/nvidia-logo-horiz-rgb-blk-for-screen.svg" class="logo__image only-light" alt="NVIDIA OpenShell Developer Guide - Home"/>
+    <img src="../_static/nvidia-logo-horiz-rgb-wht-for-screen.svg" class="logo__image only-dark pst-js-only" alt="NVIDIA OpenShell Developer Guide - Home"/>
+  
+  
+    <p class="title logo__title">NVIDIA OpenShell Developer Guide</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/NVIDIA/NemoClaw" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/nemoclaw/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-python fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/nvidia-logo-horiz-rgb-blk-for-screen.svg" class="logo__image only-light" alt="NVIDIA OpenShell Developer Guide - Home"/>
+    <img src="../_static/nvidia-logo-horiz-rgb-wht-for-screen.svg" class="logo__image only-dark pst-js-only" alt="NVIDIA OpenShell Developer Guide - Home"/>
+  
+  
+    <p class="title logo__title">NVIDIA OpenShell Developer Guide</p>
+  
+</a>
+
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/NVIDIA/NemoClaw" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/nemoclaw/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-python fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Table of Contents">
+  <p class="bd-links__title" role="heading" aria-level="1">Table of Contents</p>
+  <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">About NVIDIA OpenShell</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../about/overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about/architecture.html">How It Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about/release-notes.html">Release Notes</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Get Started</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../get-started/quickstart.html">Quickstart</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../get-started/tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../get-started/run-claude.html">Run Claude Code Safely</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../get-started/run-openclaw.html">Run OpenClaw Safely</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../get-started/run-opencode.html">Run OpenCode with NVIDIA Inference</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Sandboxes</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../sandboxes/index.html">About Sandboxes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sandboxes/create-and-manage.html">Create and Manage Sandboxes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sandboxes/providers.html">Providers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sandboxes/community-sandboxes.html">Community Sandboxes</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety and Privacy</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../safety-and-privacy/index.html">About Safety and Privacy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../safety-and-privacy/default-policies.html">Built-in Default Policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../safety-and-privacy/policies.html">Policy Configuration</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Inference Routing</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../inference/index.html">About Inference Routing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../inference/configure.html">Configure Inference Routing</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="default-policy.html">Default Policy Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="policy-schema.html">Policy Schema Reference</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Architecture Reference</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Troubleshooting</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Resources</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../resources/eula.html">License</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Architecture Reference</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <!--
+  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-License-Identifier: Apache-2.0
+-->
+<section class="tex2jax_ignore mathjax_ignore" id="architecture-reference">
+<h1>Architecture Reference<a class="headerlink" href="#architecture-reference" title="Link to this heading">#</a></h1>
+<p>This page provides detailed technical information about each OpenShell component.
+For a high-level summary, refer to the <a class="reference internal" href="../about/architecture.html"><span class="std std-doc">Architecture Overview</span></a>.</p>
+<section id="component-diagram">
+<h2>Component Diagram<a class="headerlink" href="#component-diagram" title="Link to this heading">#</a></h2>
+<pre  class="mermaid">
+        graph TB
+    subgraph docker[&quot;Docker Container&quot;]
+        subgraph k3s[&quot;k3s Cluster&quot;]
+            gw[&quot;Gateway&quot;]
+            pr[&quot;Privacy Router&quot;]
+
+            subgraph pod1[&quot;Sandbox&quot;]
+                sup1[&quot;Supervisor&quot;]
+                proxy1[&quot;L7 Proxy&quot;]
+                pe1[&quot;Policy Engine&quot;]
+                agent1[&quot;Agent&quot;]
+
+                sup1 --&gt; proxy1
+                sup1 --&gt; agent1
+                proxy1 --&gt; pe1
+            end
+
+            subgraph pod2[&quot;Sandbox&quot;]
+                sup2[&quot;Supervisor&quot;]
+                proxy2[&quot;L7 Proxy&quot;]
+                pe2[&quot;Policy Engine&quot;]
+                agent2[&quot;Agent&quot;]
+
+                sup2 --&gt; proxy2
+                sup2 --&gt; agent2
+                proxy2 --&gt; pe2
+            end
+
+            gw -- &quot;credentials,&lt;br/&gt;policies&quot; --&gt; sup1
+            gw -- &quot;credentials,&lt;br/&gt;policies&quot; --&gt; sup2
+        end
+    end
+
+    cli[&quot;nemoclaw CLI&quot;] -- &quot;gRPC&quot; --&gt; gw
+    agent1 -- &quot;all outbound&lt;br/&gt;traffic&quot; --&gt; proxy1
+    agent2 -- &quot;all outbound&lt;br/&gt;traffic&quot; --&gt; proxy2
+    proxy1 -- &quot;policy-approved&lt;br/&gt;traffic&quot; --&gt; internet[&quot;External Services&quot;]
+    proxy2 -- &quot;policy-approved&lt;br/&gt;traffic&quot; --&gt; internet
+    proxy1 -- &quot;inference traffic&quot; --&gt; pr
+    proxy2 -- &quot;inference traffic&quot; --&gt; pr
+    pr -- &quot;routed requests&quot; --&gt; backend[&quot;LLM Backend&quot;]
+
+    style cli fill:#ffffff,stroke:#000000,color:#000000
+    style gw fill:#76b900,stroke:#000000,color:#000000
+    style pr fill:#76b900,stroke:#000000,color:#000000
+    style sup1 fill:#76b900,stroke:#000000,color:#000000
+    style proxy1 fill:#76b900,stroke:#000000,color:#000000
+    style pe1 fill:#76b900,stroke:#000000,color:#000000
+    style agent1 fill:#ffffff,stroke:#000000,color:#000000
+    style sup2 fill:#76b900,stroke:#000000,color:#000000
+    style proxy2 fill:#76b900,stroke:#000000,color:#000000
+    style pe2 fill:#76b900,stroke:#000000,color:#000000
+    style agent2 fill:#ffffff,stroke:#000000,color:#000000
+    style internet fill:#ffffff,stroke:#000000,color:#000000
+    style backend fill:#ffffff,stroke:#000000,color:#000000
+    style docker fill:#f5f5f5,stroke:#000000,color:#000000
+    style k3s fill:#e8e8e8,stroke:#000000,color:#000000
+    style pod1 fill:#f5f5f5,stroke:#000000,color:#000000
+    style pod2 fill:#f5f5f5,stroke:#000000,color:#000000
+
+    linkStyle default stroke:#76b900,stroke-width:2px
+    </pre></section>
+<section id="gateway">
+<h2>Gateway<a class="headerlink" href="#gateway" title="Link to this heading">#</a></h2>
+<p>The gateway is the central control-plane API. It coordinates sandbox lifecycle
+and state, acts as the auth boundary, and brokers all requests across the
+platform. It exposes a gRPC API consumed by the CLI and handles:</p>
+<ul class="simple">
+<li><p>Sandbox lifecycle: creates, monitors, and deletes sandbox pods.</p></li>
+<li><p>Provider storage: stores encrypted provider credentials.</p></li>
+<li><p>Policy distribution: delivers policy YAML to sandboxes at startup and on
+hot-reload.</p></li>
+<li><p>SSH termination: terminates SSH tunnels from the CLI and routes them to
+the correct sandbox.</p></li>
+</ul>
+<p>The CLI never talks to sandbox pods directly. All commands go through the
+gateway.</p>
+</section>
+<section id="sandbox">
+<h2>Sandbox<a class="headerlink" href="#sandbox" title="Link to this heading">#</a></h2>
+<p>Each sandbox is an isolated runtime that includes container supervision and
+general L7 egress routing. It runs as a Kubernetes pod containing a supervisor
+process, an L7 proxy, and the agent.</p>
+<section id="supervisor">
+<h3>Supervisor<a class="headerlink" href="#supervisor" title="Link to this heading">#</a></h3>
+<p>The supervisor is the sandbox’s init process. It establishes all isolation
+boundaries before starting the agent:</p>
+<ol class="arabic simple">
+<li><p>Fetch credentials from the gateway for all attached providers.</p></li>
+<li><p>Set up the network namespace. The sandbox gets its own network stack
+with no default route. All outbound traffic is redirected through the proxy.</p></li>
+<li><p>Apply Landlock filesystem restrictions based on the policy.</p></li>
+<li><p>Apply seccomp filters to restrict available system calls.</p></li>
+<li><p>Start the L7 proxy in the sandbox’s network namespace.</p></li>
+<li><p>Start the SSH server for interactive access.</p></li>
+<li><p>Start the agent as a child process with credentials injected as
+environment variables.</p></li>
+</ol>
+</section>
+<section id="l7-proxy">
+<h3>L7 Proxy<a class="headerlink" href="#l7-proxy" title="Link to this heading">#</a></h3>
+<p>Every outbound TCP connection from any process in the sandbox is routed through
+the proxy. For each connection, the proxy:</p>
+<ol class="arabic simple">
+<li><p>Resolves the calling binary through <code class="docutils literal notranslate"><span class="pre">/proc/&lt;pid&gt;/exe</span></code>, ancestor process
+walking, and <code class="docutils literal notranslate"><span class="pre">/proc/&lt;pid&gt;/cmdline</span></code>.</p></li>
+<li><p>Queries the policy engine with the destination host, port, and resolved
+binary path.</p></li>
+<li><p>Acts on the decision: allow the connection directly, hand it to the
+privacy router for inference routing, or deny it. Refer to
+<a class="reference internal" href="../safety-and-privacy/policies.html"><span class="doc">Policy Configuration</span></a> for the full decision model.</p></li>
+</ol>
+<p>For endpoints configured with <code class="docutils literal notranslate"><span class="pre">protocol:</span> <span class="pre">rest</span></code> and <code class="docutils literal notranslate"><span class="pre">tls:</span> <span class="pre">terminate</span></code>, the proxy
+performs full L7 inspection: it decrypts TLS, reads the HTTP method and path,
+evaluates access rules, then re-encrypts and forwards the request.</p>
+</section>
+</section>
+<section id="policy-engine">
+<h2>Policy Engine<a class="headerlink" href="#policy-engine" title="Link to this heading">#</a></h2>
+<p>The policy engine is the definition and enforcement layer for filesystem,
+network, and process constraints. Defense in depth enforces policies from the
+application layer down to infrastructure and kernel layers.</p>
+<p>The engine evaluates policies compiled from the sandbox’s policy YAML. It is
+queried synchronously by the proxy on every outbound connection. Policy updates
+delivered through hot-reload are compiled and loaded without restarting the proxy.</p>
+</section>
+<section id="privacy-router">
+<h2>Privacy Router<a class="headerlink" href="#privacy-router" title="Link to this heading">#</a></h2>
+<p>The privacy router is a privacy-aware LLM routing layer that keeps sensitive
+context on sandbox compute and routes based on cost/privacy policy.</p>
+<p>When the policy engine determines that a connection should be inspected for
+inference, the privacy router:</p>
+<ol class="arabic simple">
+<li><p>Reads the intercepted HTTP request.</p></li>
+<li><p>Checks whether the method and path match a recognized inference API pattern
+(<code class="docutils literal notranslate"><span class="pre">/v1/chat/completions</span></code>, <code class="docutils literal notranslate"><span class="pre">/v1/completions</span></code>, <code class="docutils literal notranslate"><span class="pre">/v1/messages</span></code>).</p></li>
+<li><p>Selects a route whose <code class="docutils literal notranslate"><span class="pre">routing_hint</span></code> appears in the sandbox policy’s
+<code class="docutils literal notranslate"><span class="pre">allowed_routes</span></code>.</p></li>
+<li><p>Strips the original authorization header.</p></li>
+<li><p>Injects the route’s API key and model ID.</p></li>
+<li><p>Forwards the request to the route’s backend URL.</p></li>
+</ol>
+<p>The router refreshes its route list periodically from the gateway, so routes
+created with <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">inference</span> <span class="pre">create</span></code> become available without restarting
+sandboxes.</p>
+</section>
+<section id="remote-deployment">
+<h2>Remote Deployment<a class="headerlink" href="#remote-deployment" title="Link to this heading">#</a></h2>
+<p>NemoClaw can deploy the cluster to a remote host via SSH. This is useful for
+shared team environments or running sandboxes on machines with more resources.</p>
+<section id="deploy">
+<h3>Deploy<a class="headerlink" href="#deploy" title="Link to this heading">#</a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nemoclaw<span class="w"> </span>gateway<span class="w"> </span>start<span class="w"> </span>--remote<span class="w"> </span>user@host<span class="w"> </span>--ssh-key<span class="w"> </span>~/.ssh/id_rsa
+</pre></div>
+</div>
+<p>The CLI connects to the remote machine over SSH, installs k3s, deploys the
+NemoClaw control plane, and registers the cluster locally. The remote machine
+needs Docker installed.</p>
+</section>
+<section id="tunnel">
+<h3>Tunnel<a class="headerlink" href="#tunnel" title="Link to this heading">#</a></h3>
+<p>After deploying to a remote host, set up a tunnel for CLI access:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nemoclaw<span class="w"> </span>gateway<span class="w"> </span>tunnel
+</pre></div>
+</div>
+<p>This establishes an SSH tunnel from your local machine to the remote cluster’s
+API server. All subsequent CLI commands route through this tunnel transparently.</p>
+</section>
+<section id="remote-architecture">
+<h3>Remote Architecture<a class="headerlink" href="#remote-architecture" title="Link to this heading">#</a></h3>
+<p>The architecture is identical to a local deployment. The only difference is
+that the Docker container runs on the remote host instead of your workstation.
+The CLI communicates with the gateway over the SSH tunnel. Sandbox SSH
+connections are also tunneled through the gateway.</p>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="policy-schema.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Policy Schema Reference</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../troubleshooting.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Troubleshooting</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+
+
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#component-diagram">Component Diagram</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#gateway">Gateway</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#sandbox">Sandbox</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#supervisor">Supervisor</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#l7-proxy">L7 Proxy</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#policy-engine">Policy Engine</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#privacy-router">Privacy Router</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#remote-deployment">Remote Deployment</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#deploy">Deploy</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tunnel">Tunnel</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#remote-architecture">Remote Architecture</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+<a class="footer-brand logo" href="https://www.nvidia.com">
+  <img src="../_static/nvidia-logo-horiz-rgb-1c-blk-for-screen.svg" class="logo__image only-light" alt="NVIDIA"/>
+  <img src="../_static/nvidia-logo-horiz-rgb-1c-wht-for-screen.svg" class="logo__image only-dark" alt="NVIDIA"/>
+</a></div>
+      
+        <div class="footer-item">
+
+<div class="footer-links">
+  
+  
+  <a class="external" href="https://www.nvidia.com/en-us/about-nvidia/privacy-policy/">Privacy Policy</a>
+   | 
+  
+  
+  
+  <a class="external" href="https://www.nvidia.com/en-us/about-nvidia/privacy-center/">Your Privacy Choices</a>
+   | 
+  
+  
+  
+  <a class="external" href="https://www.nvidia.com/en-us/about-nvidia/terms-of-service/">Terms of Service</a>
+   | 
+  
+  
+  
+  <a class="external" href="https://www.nvidia.com/en-us/about-nvidia/accessibility/">Accessibility</a>
+   | 
+  
+  
+  
+  <a class="external" href="https://www.nvidia.com/en-us/about-nvidia/company-policies/">Corporate Policies</a>
+   | 
+  
+  
+  
+  <a class="external" href="https://www.nvidia.com/en-us/product-security/">Product Security</a>
+   | 
+  
+  
+  
+  <a class="external" href="https://www.nvidia.com/en-us/contact/">Contact</a>
+  
+  
+  
+</div>
+</div>
+      
+        <div class="footer-item">
+
+
+
+
+  <p class="copyright">
+    
+      Copyright © 2025-2026, NVIDIA Corporation.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+  </body>
+</html>
