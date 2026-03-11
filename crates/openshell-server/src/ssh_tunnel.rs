@@ -8,6 +8,7 @@ use http::StatusCode;
 use hyper::Request;
 use hyper::upgrade::Upgraded;
 use hyper_util::rt::TokioIo;
+use openshell_core::net::enable_tcp_keepalive;
 use openshell_core::proto::{Sandbox, SandboxPhase, SshSession};
 use prost::Message;
 use std::net::SocketAddr;
@@ -118,7 +119,7 @@ async fn ssh_connect(
         let mut counts = state.ssh_connections_by_token.lock().unwrap();
         let count = counts.entry(token.clone()).or_insert(0);
         if *count >= MAX_CONNECTIONS_PER_TOKEN {
-            warn!(token = %token, "SSH tunnel: per-token connection limit reached");
+            warn!(sandbox_id = %sandbox_id, active_connections = *count, limit = MAX_CONNECTIONS_PER_TOKEN, "SSH tunnel: per-token connection limit reached");
             return StatusCode::TOO_MANY_REQUESTS.into_response();
         }
         *count += 1;
@@ -137,7 +138,7 @@ async fn ssh_connect(
                     token_counts.remove(&token);
                 }
             }
-            warn!(sandbox_id = %sandbox_id, "SSH tunnel: per-sandbox connection limit reached");
+            warn!(sandbox_id = %sandbox_id, active_connections = *count, limit = MAX_CONNECTIONS_PER_SANDBOX, "SSH tunnel: per-sandbox connection limit reached");
             return StatusCode::TOO_MANY_REQUESTS.into_response();
         }
         *count += 1;
@@ -265,6 +266,9 @@ async fn establish_upstream_with_timeouts(
     upstream
         .set_nodelay(true)
         .map_err(|err| TunnelSetupError::Other(err.to_string()))?;
+    if let Err(err) = enable_tcp_keepalive(&upstream) {
+        warn!(sandbox_id = %sandbox_id, error = %err, "SSH tunnel: failed to enable upstream TCP keepalive");
+    }
     info!(sandbox_id = %sandbox_id, "SSH tunnel: sending NSSH1 handshake preface");
     let preface =
         build_preface(token, secret).map_err(|err| TunnelSetupError::Other(err.to_string()))?;
@@ -296,9 +300,26 @@ async fn bridge_tunnel(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     info!(sandbox_id = %sandbox_id, "SSH tunnel established");
     let mut upgraded = TokioIo::new(upgraded);
-    // Discard the result entirely – connection-close errors are expected when
-    // the SSH session ends and do not represent a failure worth propagating.
-    let _ = tokio::io::copy_bidirectional(&mut upgraded, &mut upstream).await;
+    match tokio::io::copy_bidirectional(&mut upgraded, &mut upstream).await {
+        Ok((client_to_sandbox, sandbox_to_client)) => {
+            info!(sandbox_id = %sandbox_id, client_to_sandbox_bytes = client_to_sandbox, sandbox_to_client_bytes = sandbox_to_client, "SSH tunnel closed");
+        }
+        Err(err)
+            if matches!(
+                err.kind(),
+                std::io::ErrorKind::BrokenPipe
+                    | std::io::ErrorKind::ConnectionAborted
+                    | std::io::ErrorKind::ConnectionReset
+                    | std::io::ErrorKind::NotConnected
+                    | std::io::ErrorKind::UnexpectedEof
+            ) =>
+        {
+            info!(sandbox_id = %sandbox_id, error = %err, "SSH tunnel closed during shutdown");
+        }
+        Err(err) => {
+            warn!(sandbox_id = %sandbox_id, error = %err, "SSH tunnel I/O failure");
+        }
+    }
     // Gracefully shut down the write-half of the upgraded connection so the
     // client receives a clean EOF instead of a TCP RST.  This gives SSH time
     // to read any remaining protocol data (e.g. exit-status) from its buffer.

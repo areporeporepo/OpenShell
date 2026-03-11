@@ -13,6 +13,7 @@ pub mod config;
 pub mod error;
 pub mod forward;
 pub mod inference;
+pub mod net;
 pub mod paths;
 pub mod proto;
 pub mod settings;

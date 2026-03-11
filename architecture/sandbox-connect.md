@@ -141,10 +141,21 @@ sequenceDiagram
 5. When SSH starts, it spawns the `ssh-proxy` subprocess as its `ProxyCommand`.
 6. `crates/openshell-cli/src/ssh.rs` -- `sandbox_ssh_proxy()`:
    - Parses the gateway URL, connects via TCP (plain) or TLS (mTLS)
+   - Enables TCP keepalive on the gateway socket
    - Sends a raw HTTP CONNECT request with `X-Sandbox-Id` and `X-Sandbox-Token` headers
    - Reads the response status line; proceeds if 200
    - Spawns two `tokio::spawn` tasks for bidirectional copy between stdin/stdout and the gateway stream
    - When the remote-to-stdout direction completes, aborts the stdin-to-remote task (SSH has all the data it needs)
+
+### Connection stability
+
+Recent SSH stability hardening is split across the client, gateway, sandbox, and edge tunnel paths:
+
+- **OpenSSH keepalives**: the CLI now sets `ServerAliveInterval=30` and `ServerAliveCountMax=3` on every SSH invocation so idle sessions still emit SSH traffic.
+- **TCP keepalive**: the CLI-to-gateway and gateway-to-sandbox TCP sockets enable 30-second keepalive probes to reduce drops from NAT, load balancers, and other idle-sensitive middleboxes.
+- **Sandbox SSH daemon**: the embedded `russh` server disables its default 10-minute inactivity timeout and instead sends protocol keepalives every 30 seconds. This prevents quiet shells from being garbage-collected while still detecting dead peers.
+- **Edge WebSocket tunnel**: the WebSocket bridge now lets both copy directions observe shutdown instead of aborting the peer task immediately, which reduces abrupt closes and truncated tail data.
+- **Limit diagnostics**: when the gateway rejects a connection because the per-session or per-sandbox cap is reached, it now logs the active count and configured limit to make 429s easier to diagnose.
 
 ### Command Execution (CLI)
 

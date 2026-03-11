@@ -10,6 +10,7 @@ use nix::sys::signal::{SaFlags, SigAction, SigHandler, SigSet, Signal, sigaction
 use openshell_core::forward::{
     find_ssh_forward_pid, resolve_ssh_gateway, shell_escape, write_forward_pid,
 };
+use openshell_core::net::enable_tcp_keepalive;
 use openshell_core::proto::{CreateSshSessionRequest, GetSandboxRequest};
 use owo_colors::OwoColorize;
 use rustls::pki_types::ServerName;
@@ -56,6 +57,8 @@ impl Editor {
 
 const SSH_PROXY_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const SSH_PROXY_STATUS_TIMEOUT: Duration = Duration::from_secs(10);
+const SSH_SERVER_ALIVE_INTERVAL_SECS: u64 = 30;
+const SSH_SERVER_ALIVE_COUNT_MAX: u64 = 3;
 
 struct SshSessionConfig {
     proxy_command: String,
@@ -144,6 +147,12 @@ fn ssh_base_command(proxy_command: &str) -> Command {
         .arg("UserKnownHostsFile=/dev/null")
         .arg("-o")
         .arg("GlobalKnownHostsFile=/dev/null")
+        .arg("-o")
+        .arg(format!(
+            "ServerAliveInterval={SSH_SERVER_ALIVE_INTERVAL_SECS}"
+        ))
+        .arg("-o")
+        .arg(format!("ServerAliveCountMax={SSH_SERVER_ALIVE_COUNT_MAX}"))
         .arg("-o")
         .arg("LogLevel=ERROR");
     command
@@ -722,8 +731,13 @@ pub async fn sandbox_ssh_proxy(
     .await
     .map_err(|_| miette::miette!("timed out waiting for gateway CONNECT response"))??;
     if status != 200 {
+        let reason = match status {
+            401 => " (SSH session expired, was revoked, or is invalid)",
+            429 => " (too many concurrent SSH connections for this session or sandbox)",
+            _ => "",
+        };
         return Err(miette::miette!(
-            "gateway CONNECT failed with status {status}"
+            "gateway CONNECT failed with status {status}{reason}"
         ));
     }
 
@@ -776,7 +790,7 @@ fn render_ssh_config(gateway: &str, name: &str) -> String {
     let proxy_cmd = format!("{exe} ssh-proxy --gateway-name {gateway} --name {name}");
     let host_alias = host_alias(name);
     format!(
-        "Host {host_alias}\n    User sandbox\n    StrictHostKeyChecking no\n    UserKnownHostsFile /dev/null\n    GlobalKnownHostsFile /dev/null\n    LogLevel ERROR\n    ProxyCommand {proxy_cmd}\n"
+        "Host {host_alias}\n    User sandbox\n    StrictHostKeyChecking no\n    UserKnownHostsFile /dev/null\n    GlobalKnownHostsFile /dev/null\n    ServerAliveInterval {SSH_SERVER_ALIVE_INTERVAL_SECS}\n    ServerAliveCountMax {SSH_SERVER_ALIVE_COUNT_MAX}\n    LogLevel ERROR\n    ProxyCommand {proxy_cmd}\n"
     )
 }
 
@@ -1000,6 +1014,7 @@ async fn connect_gateway(
         .map_err(|_| miette::miette!("timed out connecting to edge tunnel proxy"))?
         .into_diagnostic()?;
         tcp.set_nodelay(true).into_diagnostic()?;
+        let _ = enable_tcp_keepalive(&tcp);
         return Ok(Box::new(tcp));
     }
 
@@ -1008,6 +1023,7 @@ async fn connect_gateway(
         .map_err(|_| miette::miette!("timed out connecting to SSH gateway"))?
         .into_diagnostic()?;
     tcp.set_nodelay(true).into_diagnostic()?;
+    let _ = enable_tcp_keepalive(&tcp);
     if scheme.eq_ignore_ascii_case("https") {
         let materials = require_tls_materials(&format!("https://{host}:{port}"), tls)?;
         let config = build_rustls_config(&materials)?;
@@ -1167,4 +1183,19 @@ mod tests {
         assert!(message.contains("Forwarding port 3000 to sandbox demo"));
         assert!(message.contains("Access at: http://localhost:3000/"));
     }
+
+    #[test]
+    fn ssh_base_command_enables_server_keepalives() {
+        let command = ssh_base_command("openshell ssh-proxy");
+        let args = command
+            .get_args()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+
+        assert!(args.contains(&format!(
+            "ServerAliveInterval={SSH_SERVER_ALIVE_INTERVAL_SECS}"
+        )));
+        assert!(args.contains(&format!("ServerAliveCountMax={SSH_SERVER_ALIVE_COUNT_MAX}")));
+    }
+}
 }

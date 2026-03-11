@@ -10,6 +10,7 @@ use crate::sandbox;
 #[cfg(target_os = "linux")]
 use crate::{register_managed_child, unregister_managed_child};
 use miette::{IntoDiagnostic, Result};
+use openshell_core::net::enable_tcp_keepalive;
 use nix::pty::{Winsize, openpty};
 use nix::unistd::setsid;
 use rand_core::OsRng;
@@ -33,6 +34,20 @@ const PREFACE_MAGIC: &str = "NSSH1";
 const SSH_HANDSHAKE_SECRET_ENV: &str = "OPENSHELL_SSH_HANDSHAKE_SECRET";
 
 const SSH_PREFACE_TIMEOUT: Duration = Duration::from_secs(10);
+const SSH_KEEPALIVE_INTERVAL: Duration = Duration::from_secs(30);
+const SSH_KEEPALIVE_MAX_MISSES: usize = 3;
+
+fn build_ssh_server_config(host_key: PrivateKey) -> russh::server::Config {
+    russh::server::Config {
+        auth_rejection_time: Duration::from_secs(1),
+        inactivity_timeout: None,
+        keepalive_interval: Some(SSH_KEEPALIVE_INTERVAL),
+        keepalive_max: SSH_KEEPALIVE_MAX_MISSES,
+        nodelay: true,
+        keys: vec![host_key],
+        ..Default::default()
+    }
+}
 
 /// A time-bounded set of nonces used to detect replayed NSSH1 handshakes.
 /// Each entry records the `Instant` it was inserted; a background reaper task
@@ -52,14 +67,7 @@ async fn ssh_server_init(
 )> {
     let mut rng = OsRng;
     let host_key = PrivateKey::random(&mut rng, Algorithm::Ed25519).into_diagnostic()?;
-
-    let mut config = russh::server::Config {
-        auth_rejection_time: Duration::from_secs(1),
-        ..Default::default()
-    };
-    config.keys.push(host_key);
-
-    let config = Arc::new(config);
+    let config = Arc::new(build_ssh_server_config(host_key));
     let ca_paths = ca_file_paths.as_ref().map(|p| Arc::new(p.clone()));
     let listener = TcpListener::bind(listen_addr).await.into_diagnostic()?;
     info!(addr = %listen_addr, "SSH server listening");
@@ -163,6 +171,9 @@ async fn handle_connection(
     nonce_cache: &NonceCache,
 ) -> Result<()> {
     info!(peer = %peer, "SSH connection: reading handshake preface");
+    if let Err(err) = enable_tcp_keepalive(&stream) {
+        warn!(peer = %peer, error = %err, "SSH connection: failed to enable TCP keepalive");
+    }
     let mut line = String::new();
     tokio::time::timeout(SSH_PREFACE_TIMEOUT, read_line(&mut stream, &mut line))
         .await
@@ -1558,5 +1569,18 @@ mod tests {
         assert!(!is_loopback_host(""));
         assert!(!is_loopback_host("not-an-ip"));
         assert!(!is_loopback_host("[]"));
+    }
+
+    #[test]
+    fn ssh_server_config_keeps_idle_sessions_alive() {
+        let mut rng = OsRng;
+        let host_key = PrivateKey::random(&mut rng, Algorithm::Ed25519).unwrap();
+        let config = build_ssh_server_config(host_key);
+
+        assert_eq!(config.inactivity_timeout, None);
+        assert_eq!(config.keepalive_interval, Some(SSH_KEEPALIVE_INTERVAL));
+        assert_eq!(config.keepalive_max, SSH_KEEPALIVE_MAX_MISSES);
+        assert!(config.nodelay);
+        assert_eq!(config.keys.len(), 1);
     }
 }

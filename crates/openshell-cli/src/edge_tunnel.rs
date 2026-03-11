@@ -126,24 +126,18 @@ async fn handle_connection(tcp_stream: TcpStream, config: &TunnelConfig) -> Resu
     let (ws_sink, ws_source) = ws_stream.split();
     let (tcp_read, tcp_write) = tokio::io::split(tcp_stream);
 
-    // Two tasks: TCP->WS and WS->TCP. Abort the peer task once either
-    // direction finishes so the connection tears down promptly.
-    let mut tcp_to_ws = tokio::spawn(copy_tcp_to_ws(tcp_read, ws_sink));
-    let mut ws_to_tcp = tokio::spawn(copy_ws_to_tcp(ws_source, tcp_write));
+    // Keep both directions alive until each side has observed shutdown. This
+    // avoids cutting off trailing bytes when one half closes slightly earlier
+    // than the other.
+    let tcp_to_ws = tokio::spawn(copy_tcp_to_ws(tcp_read, ws_sink));
+    let ws_to_tcp = tokio::spawn(copy_ws_to_tcp(ws_source, tcp_write));
 
-    tokio::select! {
-        res = &mut tcp_to_ws => {
-            if let Err(e) = res {
-                debug!(error = %e, "tcp->ws task panicked");
-            }
-            ws_to_tcp.abort();
-        }
-        res = &mut ws_to_tcp => {
-            if let Err(e) = res {
-                debug!(error = %e, "ws->tcp task panicked");
-            }
-            tcp_to_ws.abort();
-        }
+    let (tcp_to_ws_res, ws_to_tcp_res) = tokio::join!(tcp_to_ws, ws_to_tcp);
+    if let Err(e) = tcp_to_ws_res {
+        debug!(error = %e, "tcp->ws task panicked");
+    }
+    if let Err(e) = ws_to_tcp_res {
+        debug!(error = %e, "ws->tcp task panicked");
     }
 
     Ok(())

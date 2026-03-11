@@ -67,24 +67,22 @@ async fn handle_ws_tunnel(
             debug!(error = %e, "WS tunnel: multiplex service error");
         }
     });
-    let mut tunnel_to_ws = tokio::spawn(copy_reader_to_ws(tunnel_read, ws_sink));
-    let mut ws_to_tunnel = tokio::spawn(copy_ws_to_writer(ws_source, tunnel_write));
+    let tunnel_to_ws = tokio::spawn(copy_reader_to_ws(tunnel_read, ws_sink));
+    let ws_to_tunnel = tokio::spawn(copy_ws_to_writer(ws_source, tunnel_write));
 
-    tokio::select! {
-        res = &mut tunnel_to_ws => {
-            if let Ok(Err(e)) = res {
-                debug!(error = %e, "WS tunnel: tunnel->ws error");
-            }
-            ws_to_tunnel.abort();
-        }
-        res = &mut ws_to_tunnel => {
-            if let Ok(Err(e)) = res {
-                debug!(error = %e, "WS tunnel: ws->tunnel error");
-            }
-            tunnel_to_ws.abort();
-        }
+    let (tunnel_to_ws_res, ws_to_tunnel_res) = tokio::join!(tunnel_to_ws, ws_to_tunnel);
+    match tunnel_to_ws_res {
+        Ok(Ok(())) => {}
+        Ok(Err(e)) => debug!(error = %e, "WS tunnel: tunnel->ws error"),
+        Err(e) => debug!(error = %e, "WS tunnel: tunnel->ws task panicked"),
+    }
+    match ws_to_tunnel_res {
+        Ok(Ok(())) => {}
+        Ok(Err(e)) => debug!(error = %e, "WS tunnel: ws->tunnel error"),
+        Err(e) => debug!(error = %e, "WS tunnel: ws->tunnel task panicked"),
     }
     service_task.abort();
+    let _ = service_task.await;
 
     Ok(())
 }

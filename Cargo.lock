@@ -2875,6 +2875,7 @@ dependencies = [
  "protobuf-src",
  "serde",
  "serde_json",
+ "socket2 0.6.3",
  "tempfile",
  "thiserror 2.0.18",
  "tonic",
