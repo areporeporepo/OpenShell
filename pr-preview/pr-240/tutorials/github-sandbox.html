@@ -460,12 +460,13 @@ You then diagnose the denial from your machine and from inside the sandbox, appl
 </pre></div>
 </div>
 <p>Claude recognizes that it needs GitHub credentials. It asks how you want to authenticate. Provide your GitHub personal access token by pasting it into the conversation. Claude configures authentication and attempts the push.</p>
-<p>The push fails. Claude reports an error, but the failure is not an authentication problem. The default sandbox policy permits read-only access to GitHub but blocks write operations, so the proxy denies the push before the request reaches GitHub’s servers.</p>
+<p>The push should fail. Claude reports an error, but the failure is not an authentication problem. The default sandbox policy permits read-only access to GitHub and blocks write operations, so the proxy denies the push before the request reaches the GitHub server.</p>
 </section>
 <section id="diagnose-the-denial">
 <h2>Diagnose the Denial<a class="headerlink" href="#diagnose-the-denial" title="Link to this heading">#</a></h2>
+<p>In this section, you diagnose the denial from your machine and from inside the sandbox.</p>
 <section id="view-the-logs-from-your-machine">
-<h3>View the logs from your machine<a class="headerlink" href="#view-the-logs-from-your-machine" title="Link to this heading">#</a></h3>
+<h3>View the Logs from Your Machine<a class="headerlink" href="#view-the-logs-from-your-machine" title="Link to this heading">#</a></h3>
 <p>In terminal 2, launch the OpenShell terminal:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>openshell<span class="w"> </span>term
 </pre></div>
@@ -484,7 +485,7 @@ l7_deny_reason: PUT /repos/&lt;org&gt;/&lt;repo&gt;/contents/hello_world.py not 
 <p>The log shows that the sandbox proxy intercepted an outbound <code class="docutils literal notranslate"><span class="pre">PUT</span></code> request to <code class="docutils literal notranslate"><span class="pre">api.github.com</span></code> and denied it. The <code class="docutils literal notranslate"><span class="pre">github_rest_api</span></code> policy allows read operations (GET) but blocks write operations (PUT, POST, DELETE) to the GitHub API. A similar denial appears for <code class="docutils literal notranslate"><span class="pre">github.com</span></code> if Claude attempted a git push over HTTPS.</p>
 </section>
 <section id="ask-claude-to-check-the-sandbox-logs">
-<h3>Ask Claude to check the sandbox logs<a class="headerlink" href="#ask-claude-to-check-the-sandbox-logs" title="Link to this heading">#</a></h3>
+<h3>Ask Claude to Check the Sandbox Logs<a class="headerlink" href="#ask-claude-to-check-the-sandbox-logs" title="Link to this heading">#</a></h3>
 <p>In terminal 1, ask Claude Code to check the sandbox logs for denied requests:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Check the sandbox logs for any denied network requests. What is blocking the push?
 </pre></div>
@@ -759,8 +760,8 @@ until the policy is updated.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#launch-the-sandbox">Launch the Sandbox</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#push-code-to-github">Push Code to GitHub</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#diagnose-the-denial">Diagnose the Denial</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#view-the-logs-from-your-machine">View the logs from your machine</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ask-claude-to-check-the-sandbox-logs">Ask Claude to check the sandbox logs</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#view-the-logs-from-your-machine">View the Logs from Your Machine</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ask-claude-to-check-the-sandbox-logs">Ask Claude to Check the Sandbox Logs</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#update-the-policy-from-your-machine">Update the Policy from Your Machine</a></li>
