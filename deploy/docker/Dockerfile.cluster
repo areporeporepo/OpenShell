@@ -175,9 +175,11 @@ FROM nvcr.io/nvidia/base/ubuntu:noble-20251013
 # - mount/umount: needed by kubelet for volume mounts (provided by mount package)
 # - ca-certificates: TLS verification for registry pulls
 # - conntrack: k3s/kube-proxy uses conntrack for connection tracking
+# - curl: used by entrypoint to validate registry credentials
 # - dnsutils: nslookup used by entrypoint/healthcheck for DNS probe
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    curl \
     iptables \
     mount \
     dnsutils \

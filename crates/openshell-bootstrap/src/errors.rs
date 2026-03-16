@@ -240,8 +240,9 @@ fn diagnose_port_conflict(_gateway_name: &str) -> GatewayFailureDiagnosis {
 fn diagnose_image_pull_auth_failure(_gateway_name: &str) -> GatewayFailureDiagnosis {
     GatewayFailureDiagnosis {
         summary: "Registry authentication failed".to_string(),
-        explanation: "Could not authenticate with the container registry. The image may not \
-            exist, or you may not have permission to access it."
+        explanation: "Could not authenticate with the container registry and anonymous \
+            pull also failed. The image may not exist, the repository may be private, \
+            or there may be a network issue preventing access."
             .to_string(),
         recovery_steps: vec![
             RecoveryStep::with_command(

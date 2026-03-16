@@ -6,6 +6,7 @@
 use crate::docker::{HostPlatform, get_host_platform};
 use bollard::Docker;
 use bollard::auth::DockerCredentials;
+use bollard::errors::Error as BollardError;
 use bollard::query_parameters::{CreateImageOptions, TagImageOptionsBuilder};
 use futures::StreamExt;
 use miette::{IntoDiagnostic, Result, WrapErr};
@@ -222,15 +223,11 @@ pub async fn pull_remote_image(
         ..Default::default()
     };
 
-    let mut stream = remote.create_image(Some(options), None, credentials);
-    while let Some(result) = stream.next().await {
-        let info = result
-            .into_diagnostic()
-            .wrap_err("failed to pull image on remote host")?;
+    // Attempt the pull with credentials, falling back to anonymous on auth failure.
+    let result = consume_pull_stream(remote, options.clone(), credentials, |info| {
         if let Some(ref status) = info.status {
             debug!("Remote pull: {}", status);
         }
-        // Report layer progress
         if let Some(ref status) = info.status
             && let Some(ref detail) = info.progress_detail
             && let (Some(current), Some(total)) = (detail.current, detail.total)
@@ -238,6 +235,38 @@ pub async fn pull_remote_image(
             let current_mb = current / (1024 * 1024);
             let total_mb = total / (1024 * 1024);
             on_progress(format!("[progress] {status}: {current_mb}/{total_mb} MB"));
+        }
+    })
+    .await;
+
+    match result {
+        Ok(()) => {}
+        Err(err) if is_auth_failure(&err) => {
+            debug!(
+                "Registry credentials rejected for {}, retrying as anonymous pull",
+                registry_image
+            );
+            consume_pull_stream(remote, options, None, |info| {
+                if let Some(ref status) = info.status {
+                    debug!("Remote pull (anonymous): {}", status);
+                }
+                if let Some(ref status) = info.status
+                    && let Some(ref detail) = info.progress_detail
+                    && let (Some(current), Some(total)) = (detail.current, detail.total)
+                {
+                    let current_mb = current / (1024 * 1024);
+                    let total_mb = total / (1024 * 1024);
+                    on_progress(format!("[progress] {status}: {current_mb}/{total_mb} MB"));
+                }
+            })
+            .await
+            .into_diagnostic()
+            .wrap_err("failed to pull image on remote host (anonymous fallback)")?;
+        }
+        Err(err) => {
+            return Err(err)
+                .into_diagnostic()
+                .wrap_err("failed to pull image on remote host");
         }
     }
 
@@ -302,6 +331,50 @@ pub async fn pull_remote_image(
 pub(crate) fn is_local_image_ref(image_ref: &str) -> bool {
     let (repo, _tag) = parse_image_ref(image_ref);
     !repo.contains('/')
+}
+
+/// Check whether a bollard error indicates an authentication/authorization failure.
+///
+/// These errors occur when credentials are rejected by the registry. For public
+/// repos on ghcr.io, retrying without credentials (anonymous pull) may succeed.
+pub(crate) fn is_auth_failure(err: &BollardError) -> bool {
+    match err {
+        BollardError::DockerResponseServerError {
+            status_code: 401 | 403,
+            ..
+        } => true,
+        BollardError::DockerResponseServerError { message, .. } => {
+            let msg = message.to_lowercase();
+            msg.contains("pull access denied")
+                || msg.contains("unauthorized")
+                || msg.contains("denied: access forbidden")
+        }
+        BollardError::DockerStreamError { error } => {
+            let msg = error.to_lowercase();
+            msg.contains("pull access denied")
+                || msg.contains("unauthorized")
+                || msg.contains("denied: access forbidden")
+        }
+        _ => false,
+    }
+}
+
+/// Consume a `create_image` pull stream to completion.
+///
+/// Returns `Ok(())` on success, or the first [`BollardError`] on failure.
+/// The `on_info` callback is invoked for each progress chunk.
+async fn consume_pull_stream(
+    docker: &Docker,
+    options: CreateImageOptions,
+    credentials: Option<DockerCredentials>,
+    mut on_info: impl FnMut(&bollard::models::CreateImageInfo),
+) -> std::result::Result<(), BollardError> {
+    let mut stream = docker.create_image(Some(options), None, credentials);
+    while let Some(result) = stream.next().await {
+        let info = result?;
+        on_info(&info);
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -398,5 +471,59 @@ mod tests {
             DEFAULT_IMAGE_REPO_BASE.starts_with(DEFAULT_REGISTRY),
             "repo base should start with the registry host"
         );
+    }
+
+    #[test]
+    fn is_auth_failure_status_401() {
+        let err = BollardError::DockerResponseServerError {
+            status_code: 401,
+            message: "Unauthorized".to_string(),
+        };
+        assert!(is_auth_failure(&err));
+    }
+
+    #[test]
+    fn is_auth_failure_status_403() {
+        let err = BollardError::DockerResponseServerError {
+            status_code: 403,
+            message: "Forbidden".to_string(),
+        };
+        assert!(is_auth_failure(&err));
+    }
+
+    #[test]
+    fn is_auth_failure_pull_access_denied_message() {
+        let err = BollardError::DockerResponseServerError {
+            status_code: 500,
+            message: "pull access denied for ghcr.io/foo/bar, repository does not exist"
+                .to_string(),
+        };
+        assert!(is_auth_failure(&err));
+    }
+
+    #[test]
+    fn is_auth_failure_stream_error() {
+        let err = BollardError::DockerStreamError {
+            error: "unauthorized: unauthenticated: User cannot be authenticated".to_string(),
+        };
+        assert!(is_auth_failure(&err));
+    }
+
+    #[test]
+    fn is_auth_failure_not_found_is_false() {
+        let err = BollardError::DockerResponseServerError {
+            status_code: 404,
+            message: "Not found".to_string(),
+        };
+        assert!(!is_auth_failure(&err));
+    }
+
+    #[test]
+    fn is_auth_failure_generic_500_is_false() {
+        let err = BollardError::DockerResponseServerError {
+            status_code: 500,
+            message: "internal server error".to_string(),
+        };
+        assert!(!is_auth_failure(&err));
     }
 }

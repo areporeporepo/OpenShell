@@ -21,6 +21,7 @@ use bollard::query_parameters::{
 use futures::StreamExt;
 use miette::{IntoDiagnostic, Result, WrapErr};
 use std::collections::HashMap;
+use tracing::debug;
 
 const REGISTRY_NAMESPACE_DEFAULT: &str = "openshell";
 
@@ -436,10 +437,36 @@ pub async fn ensure_image(
         ..Default::default()
     };
 
-    let mut stream = docker.create_image(Some(options), None, credentials);
+    // Attempt the pull with credentials (if any), falling back to an
+    // anonymous pull when the registry rejects the credentials. This
+    // handles public ghcr.io repos where sending a token the caller
+    // doesn't have access with causes a 401/403, but an unauthenticated
+    // pull would succeed.
+    let has_credentials = credentials.is_some();
+    let mut stream = docker.create_image(Some(options.clone()), None, credentials);
+    let mut auth_failed = false;
     while let Some(result) = stream.next().await {
-        result.into_diagnostic()?;
+        match result {
+            Ok(_info) => {}
+            Err(err) if has_credentials && image::is_auth_failure(&err) => {
+                debug!(
+                    "Registry credentials rejected for {}, retrying as anonymous pull",
+                    repo
+                );
+                auth_failed = true;
+                break;
+            }
+            Err(err) => return Err(err).into_diagnostic(),
+        }
     }
+
+    if auth_failed {
+        let mut stream = docker.create_image(Some(options), None, None);
+        while let Some(result) = stream.next().await {
+            result.into_diagnostic()?;
+        }
+    }
+
     Ok(())
 }
 

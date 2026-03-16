@@ -208,8 +208,26 @@ REGEOF
 REGEOF
     fi
 
+    # Helper: test whether registry credentials are accepted by attempting
+    # a token exchange via the OCI distribution auth endpoint.  Returns 0
+    # when credentials work, non-zero otherwise.  This lets us skip writing
+    # auth config for registries where the token is rejected — containerd
+    # will then fall back to anonymous pulls, which succeeds for public repos.
+    test_registry_credentials() {
+        local host="$1" user="$2" pass="$3"
+        # ghcr.io uses token-based auth; we test with an arbitrary scope.
+        curl -sf -o /dev/null -u "${user}:${pass}" \
+            "https://${host}/token?service=${host}&scope=repository:nvidia/openshell/cluster:pull" \
+            2>/dev/null
+    }
+
+    # Track whether the configs: YAML block has been started so subsequent
+    # registry entries can be appended without duplicating the key.
+    CONFIGS_STARTED=false
+
     if [ -n "${REGISTRY_USERNAME:-}" ] && [ -n "${REGISTRY_PASSWORD:-}" ]; then
-        cat >> "$REGISTRIES_YAML" <<REGEOF
+        if test_registry_credentials "${REGISTRY_HOST}" "${REGISTRY_USERNAME}" "${REGISTRY_PASSWORD}"; then
+            cat >> "$REGISTRIES_YAML" <<REGEOF
 
 configs:
   "${REGISTRY_HOST}":
@@ -217,23 +235,27 @@ configs:
       username: ${REGISTRY_USERNAME}
       password: ${REGISTRY_PASSWORD}
 REGEOF
+            CONFIGS_STARTED=true
+        else
+            echo "Registry credentials rejected for ${REGISTRY_HOST}, skipping auth config (anonymous pulls)"
+        fi
     fi
 
     # Add auth for the community registry when it differs from the
     # primary registry (community sandbox images live there).
     if [ -n "${COMMUNITY_REGISTRY_HOST:-}" ] && [ "${COMMUNITY_REGISTRY_HOST}" != "${REGISTRY_HOST}" ] \
        && [ -n "${COMMUNITY_REGISTRY_USERNAME:-}" ] && [ -n "${COMMUNITY_REGISTRY_PASSWORD:-}" ]; then
-        # Append to existing configs block or start a new one.
-        if [ -n "${REGISTRY_USERNAME:-}" ] && [ -n "${REGISTRY_PASSWORD:-}" ]; then
-            # configs: block already started above — just append the entry.
-            cat >> "$REGISTRIES_YAML" <<REGEOF
+        if test_registry_credentials "${COMMUNITY_REGISTRY_HOST}" "${COMMUNITY_REGISTRY_USERNAME}" "${COMMUNITY_REGISTRY_PASSWORD}"; then
+            if [ "$CONFIGS_STARTED" = "true" ]; then
+                # configs: block already started above — just append the entry.
+                cat >> "$REGISTRIES_YAML" <<REGEOF
   "${COMMUNITY_REGISTRY_HOST}":
     auth:
       username: ${COMMUNITY_REGISTRY_USERNAME}
       password: ${COMMUNITY_REGISTRY_PASSWORD}
 REGEOF
-        else
-            cat >> "$REGISTRIES_YAML" <<REGEOF
+            else
+                cat >> "$REGISTRIES_YAML" <<REGEOF
 
 configs:
   "${COMMUNITY_REGISTRY_HOST}":
@@ -241,6 +263,9 @@ configs:
       username: ${COMMUNITY_REGISTRY_USERNAME}
       password: ${COMMUNITY_REGISTRY_PASSWORD}
 REGEOF
+            fi
+        else
+            echo "Community registry credentials rejected for ${COMMUNITY_REGISTRY_HOST}, skipping auth config (anonymous pulls)"
         fi
     fi
 else
