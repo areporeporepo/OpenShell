@@ -45,7 +45,7 @@
 
 
 
-    <script src="../_static/documentation_options.js?v=933cd161"></script>
+    <script src="../_static/documentation_options.js?v=91d07486"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -53,13 +53,6 @@
     <script src="../_static/search-assets.bundle.js?v=00e3e057"></script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'sandboxes/manage-sandboxes';</script>
-    <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
-        DOCUMENTATION_OPTIONS.theme_switcher_json_url = '../versions1.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.0.3';
-        DOCUMENTATION_OPTIONS.show_version_warning_banner =
-            false;
-        </script>
 
     <link rel="canonical" href="https://docs.nvidia.com/openshell/latest/sandboxes/manage-sandboxes.html" />
     <link rel="icon" href="../_static/favicon.png"/>
@@ -156,32 +149,6 @@
   </div>
   
   <div class="col-lg-9 navbar-header-items">
-    
-    <div class="me-auto navbar-header-items__center">
-      
-        <div class="navbar-item">
-
-
-<div class="version-switcher__container dropdown pst-js-only">
-  <button id="pst-version-switcher-button-2"
-    type="button"
-    class="version-switcher__button btn btn-sm dropdown-toggle"
-    data-bs-toggle="dropdown"
-    aria-haspopup="listbox"
-    aria-controls="pst-version-switcher-list-2"
-    aria-label="Version switcher list"
-  >
-    Choose version  <!-- this text may get changed later by javascript -->
-    <span class="caret"></span>
-  </button>
-  <div id="pst-version-switcher-list-2"
-    class="version-switcher__menu dropdown-menu list-group-flush py-0"
-    role="listbox" aria-labelledby="pst-version-switcher-button-2">
-    <!-- dropdown will be populated by javascript on page load -->
-  </div>
-</div></div>
-      
-    </div>
     
     
     <div class="navbar-header-items__end">
@@ -296,35 +263,6 @@
   
   <div class="sidebar-header-items sidebar-primary__section">
     
-    
-      <div class="sidebar-header-items__center">
-        
-          
-          
-            <div class="navbar-item">
-
-
-<div class="version-switcher__container dropdown pst-js-only">
-  <button id="pst-version-switcher-button-3"
-    type="button"
-    class="version-switcher__button btn btn-sm dropdown-toggle"
-    data-bs-toggle="dropdown"
-    aria-haspopup="listbox"
-    aria-controls="pst-version-switcher-list-3"
-    aria-label="Version switcher list"
-  >
-    Choose version  <!-- this text may get changed later by javascript -->
-    <span class="caret"></span>
-  </button>
-  <div id="pst-version-switcher-list-3"
-    class="version-switcher__menu dropdown-menu list-group-flush py-0"
-    role="listbox" aria-labelledby="pst-version-switcher-button-3">
-    <!-- dropdown will be populated by javascript on page load -->
-  </div>
-</div></div>
-          
-        
-      </div>
     
     
     
@@ -523,41 +461,6 @@ the cause. Start Docker and try again.</p>
 </pre></div>
 </div>
 <p>The CLI resolves community names against the <a class="reference external" href="https://github.com/NVIDIA/OpenShell-Community" rel="noreferer noopener" target="_blank">OpenShell Community</a> catalog, pulls the bundled Dockerfile and policy, builds the image locally, and creates the sandbox. For the full catalog and how to contribute your own, refer to <a class="reference internal" href="community-sandboxes.html"><span class="doc">Community Sandboxes</span></a>.</p>
-<p>The following is an example of a fully specified creation command:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>openshell<span class="w"> </span>sandbox<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--name<span class="w"> </span>dev<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--provider<span class="w"> </span>my-claude<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--policy<span class="w"> </span>policy.yaml<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--upload<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--<span class="w"> </span>claude
-</pre></div>
-</div>
-<p>Additional <code class="docutils literal notranslate"><span class="pre">sandbox</span> <span class="pre">create</span></code> flags:</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Flag</p></th>
-<th class="head"><p>Purpose</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--no-keep</span></code></p></td>
-<td><p>Delete the sandbox automatically after the initial command exits</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--forward</span> <span class="pre">&lt;port&gt;</span></code></p></td>
-<td><p>Forward a local port to the sandbox before running</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--tty</span></code> / <code class="docutils literal notranslate"><span class="pre">--no-tty</span></code></p></td>
-<td><p>Force or disable pseudo-terminal allocation</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--no-bootstrap</span></code></p></td>
-<td><p>Error if no gateway is available instead of auto-bootstrapping</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--no-auto-providers</span></code></p></td>
-<td><p>Error if required providers are missing instead of prompting</p></td>
-</tr>
-</tbody>
-</table>
-</div>
 </section>
 </section>
 <section id="connect-to-a-sandbox">
@@ -670,7 +573,6 @@ OpenShell-managed SSH include file instead of cluttering your main
 <h2>Delete Sandboxes<a class="headerlink" href="#delete-sandboxes" title="Link to this heading">#</a></h2>
 <p>Deleting a sandbox stops all processes, releases resources, and purges injected credentials.</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>openshell<span class="w"> </span>sandbox<span class="w"> </span>delete<span class="w"> </span>my-sandbox
-<span class="gp">$ </span>openshell<span class="w"> </span>sandbox<span class="w"> </span>delete<span class="w"> </span>--all
 </pre></div>
 </div>
 </section>

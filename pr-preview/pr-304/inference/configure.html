@@ -45,7 +45,7 @@
 
 
 
-    <script src="../_static/documentation_options.js?v=933cd161"></script>
+    <script src="../_static/documentation_options.js?v=91d07486"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -53,13 +53,6 @@
     <script src="../_static/search-assets.bundle.js?v=00e3e057"></script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'inference/configure';</script>
-    <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
-        DOCUMENTATION_OPTIONS.theme_switcher_json_url = '../versions1.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.0.3';
-        DOCUMENTATION_OPTIONS.show_version_warning_banner =
-            false;
-        </script>
 
     <link rel="canonical" href="https://docs.nvidia.com/openshell/latest/inference/configure.html" />
     <link rel="icon" href="../_static/favicon.png"/>
@@ -156,32 +149,6 @@
   </div>
   
   <div class="col-lg-9 navbar-header-items">
-    
-    <div class="me-auto navbar-header-items__center">
-      
-        <div class="navbar-item">
-
-
-<div class="version-switcher__container dropdown pst-js-only">
-  <button id="pst-version-switcher-button-2"
-    type="button"
-    class="version-switcher__button btn btn-sm dropdown-toggle"
-    data-bs-toggle="dropdown"
-    aria-haspopup="listbox"
-    aria-controls="pst-version-switcher-list-2"
-    aria-label="Version switcher list"
-  >
-    Choose version  <!-- this text may get changed later by javascript -->
-    <span class="caret"></span>
-  </button>
-  <div id="pst-version-switcher-list-2"
-    class="version-switcher__menu dropdown-menu list-group-flush py-0"
-    role="listbox" aria-labelledby="pst-version-switcher-button-2">
-    <!-- dropdown will be populated by javascript on page load -->
-  </div>
-</div></div>
-      
-    </div>
     
     
     <div class="navbar-header-items__end">
@@ -296,35 +263,6 @@
   
   <div class="sidebar-header-items sidebar-primary__section">
     
-    
-      <div class="sidebar-header-items__center">
-        
-          
-          
-            <div class="navbar-item">
-
-
-<div class="version-switcher__container dropdown pst-js-only">
-  <button id="pst-version-switcher-button-3"
-    type="button"
-    class="version-switcher__button btn btn-sm dropdown-toggle"
-    data-bs-toggle="dropdown"
-    aria-haspopup="listbox"
-    aria-controls="pst-version-switcher-list-3"
-    aria-label="Version switcher list"
-  >
-    Choose version  <!-- this text may get changed later by javascript -->
-    <span class="caret"></span>
-  </button>
-  <div id="pst-version-switcher-list-3"
-    class="version-switcher__menu dropdown-menu list-group-flush py-0"
-    role="listbox" aria-labelledby="pst-version-switcher-button-3">
-    <!-- dropdown will be populated by javascript on page load -->
-  </div>
-</div></div>
-          
-        
-      </div>
     
     
     
@@ -590,8 +528,8 @@ Anthropic</label><div class="sd-tab-content docutils">
 <p>Use this endpoint when inference should stay local to the host for privacy and security reasons. External providers that should be reached directly belong in <code class="docutils literal notranslate"><span class="pre">network_policies</span></code> instead.</p>
 <section id="verify-the-endpoint-from-a-sandbox">
 <h3>Verify the Endpoint from a Sandbox<a class="headerlink" href="#verify-the-endpoint-from-a-sandbox" title="Link to this heading">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">inference</span> <span class="pre">get</span></code> confirms the configuration was saved, but does not verify the upstream endpoint is reachable. The CLI also accepts <code class="docutils literal notranslate"><span class="pre">--no-verify</span></code> on <code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">inference</span> <span class="pre">set</span></code> and <code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">inference</span> <span class="pre">update</span></code> so automation can opt out explicitly ahead of a future verify-by-default rollout.</p>
-<p>To confirm end-to-end connectivity, connect to a sandbox and run:</p>
+<p><code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">inference</span> <span class="pre">set</span></code> and <code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">inference</span> <span class="pre">update</span></code> verify the resolved upstream endpoint by default before saving the configuration. If the endpoint is not live yet, retry with <code class="docutils literal notranslate"><span class="pre">--no-verify</span></code> to persist the route without the probe.</p>
+<p><code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">inference</span> <span class="pre">get</span></code> confirms the current saved configuration. To confirm end-to-end connectivity from a sandbox, run:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>https://inference.local/v1/responses<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>-d<span class="w"> </span><span class="s1">&#39;{</span>
