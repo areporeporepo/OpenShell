@@ -808,7 +808,7 @@ enum GatewayCommands {
         /// `nvidia.com/gpu` resources. Requires NVIDIA drivers and the
         /// NVIDIA Container Toolkit on the host.
         ///
-        /// An optional argument controls the injection mode:
+        /// An optional argument controls the injection mode (`--device` is an alias):
         ///
         ///   --gpu              Auto-select: CDI when enabled on the daemon, legacy otherwise
         ///   --gpu=legacy       Force legacy nvidia DeviceRequest (specify once only)
@@ -817,6 +817,7 @@ enum GatewayCommands {
         /// Example CDI device names: `nvidia.com/gpu=all`, `nvidia.com/gpu=0`
         #[arg(
             long = "gpu",
+            alias = "device",
             num_args = 0..=1,
             default_missing_value = "auto",
             action = clap::ArgAction::Append,

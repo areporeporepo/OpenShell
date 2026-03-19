@@ -316,9 +316,9 @@ Host GPU drivers & NVIDIA Container Toolkit
                 └─ Pods: request nvidia.com/gpu in resource limits
 ```
 
-### `--gpu` flag
+### `--gpu` / `--device` flag
 
-The `--gpu` flag on `gateway start` accepts an optional value that overrides the automatic injection mode:
+The `--gpu` flag (aliased as `--device`) on `gateway start` accepts an optional value that overrides the automatic injection mode:
 
 | Invocation | Behaviour |
 |---|---|
