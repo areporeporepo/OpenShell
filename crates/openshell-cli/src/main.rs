@@ -810,10 +810,19 @@ enum GatewayCommands {
         ///
         /// An optional argument controls the injection mode:
         ///
-        ///   --gpu            Auto-select: CDI when enabled on the daemon, legacy otherwise
-        ///   --gpu=legacy     Force legacy nvidia DeviceRequest
-        #[arg(long = "gpu", num_args = 0..=1, default_missing_value = "auto", value_name = "MODE")]
-        gpu: Option<String>,
+        ///   --gpu              Auto-select: CDI when enabled on the daemon, legacy otherwise
+        ///   --gpu=legacy       Force legacy nvidia DeviceRequest (specify once only)
+        ///   --gpu=<cdi-id>     Use explicit CDI device name (repeatable)
+        ///
+        /// Example CDI device names: `nvidia.com/gpu=all`, `nvidia.com/gpu=0`
+        #[arg(
+            long = "gpu",
+            num_args = 0..=1,
+            default_missing_value = "auto",
+            action = clap::ArgAction::Append,
+            value_name = "MODE",
+        )]
+        gpu: Vec<String>,
     },
 
     /// Stop the gateway (preserves state).
@@ -1519,6 +1528,29 @@ enum ForwardCommands {
     List,
 }
 
+/// Validate and normalise the raw values collected from `--gpu`.
+///
+/// | Input             | Output                          |
+/// |-------------------|---------------------------------|
+/// | `[]`              | `[]`  — no GPU                  |
+/// | `["auto"]`        | `["auto"]`  — resolve at deploy |
+/// | `["legacy"]`      | `["legacy"]`                    |
+/// | `[cdi-ids…]`      | `[cdi-ids…]`                    |
+///
+/// Returns an error when `legacy` or `auto` is mixed with other values, or
+/// appears more than once.
+fn parse_gpu_flag(values: &[String]) -> Result<Vec<String>> {
+    match values {
+        [] => Ok(vec![]),
+        [v] if v == "auto" || v == "legacy" => Ok(values.to_vec()),
+        ids if ids.iter().all(|v| v != "auto" && v != "legacy") => Ok(ids.to_vec()),
+        _ => Err(miette::miette!(
+            "--gpu=legacy and --gpu=auto can only be specified once \
+             and cannot be mixed with CDI device names"
+        )),
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     // Install the rustls crypto provider before completion runs — completers may
@@ -1567,16 +1599,7 @@ async fn main() -> Result<()> {
                 registry_token,
                 gpu,
             } => {
-                let gpu = match gpu.as_deref() {
-                    None => vec![],
-                    Some("auto") => vec!["auto".to_string()],
-                    Some("legacy") => vec!["legacy".to_string()],
-                    Some(other) => {
-                        return Err(miette::miette!(
-                            "unknown --gpu value: {other:?}; expected `legacy`"
-                        ));
-                    }
-                };
+                let gpu = parse_gpu_flag(&gpu)?;
                 run::gateway_admin_deploy(
                     &name,
                     remote.as_deref(),
@@ -3129,5 +3152,61 @@ mod tests {
             }
             other => panic!("expected settings delete command, got: {other:?}"),
         }
+    }
+
+    // --- parse_gpu_flag ---
+
+    #[test]
+    fn parse_gpu_empty_returns_empty() {
+        assert_eq!(parse_gpu_flag(&[]).unwrap(), Vec::<String>::new());
+    }
+
+    #[test]
+    fn parse_gpu_auto_accepted() {
+        assert_eq!(parse_gpu_flag(&["auto".to_string()]).unwrap(), vec!["auto"]);
+    }
+
+    #[test]
+    fn parse_gpu_legacy_accepted() {
+        assert_eq!(
+            parse_gpu_flag(&["legacy".to_string()]).unwrap(),
+            vec!["legacy"]
+        );
+    }
+
+    #[test]
+    fn parse_gpu_cdi_device_ids_accepted() {
+        assert_eq!(
+            parse_gpu_flag(&["nvidia.com/gpu=all".to_string()]).unwrap(),
+            vec!["nvidia.com/gpu=all"],
+        );
+        assert_eq!(
+            parse_gpu_flag(&[
+                "nvidia.com/gpu=0".to_string(),
+                "nvidia.com/gpu=1".to_string()
+            ])
+            .unwrap(),
+            vec!["nvidia.com/gpu=0", "nvidia.com/gpu=1"],
+        );
+    }
+
+    #[test]
+    fn parse_gpu_legacy_mixed_with_cdi_is_error() {
+        assert!(parse_gpu_flag(&["legacy".to_string(), "nvidia.com/gpu=all".to_string()]).is_err());
+    }
+
+    #[test]
+    fn parse_gpu_auto_mixed_with_cdi_is_error() {
+        assert!(parse_gpu_flag(&["auto".to_string(), "nvidia.com/gpu=all".to_string()]).is_err());
+    }
+
+    #[test]
+    fn parse_gpu_double_legacy_is_error() {
+        assert!(parse_gpu_flag(&["legacy".to_string(), "legacy".to_string()]).is_err());
+    }
+
+    #[test]
+    fn parse_gpu_double_auto_is_error() {
+        assert!(parse_gpu_flag(&["auto".to_string(), "auto".to_string()]).is_err());
     }
 }

@@ -324,6 +324,9 @@ The `--gpu` flag on `gateway start` accepts an optional value that overrides the
 |---|---|
 | `--gpu` | Auto-select: CDI when enabled on the daemon, `--gpus all` otherwise |
 | `--gpu=legacy` | Force `--gpus all` |
+| `--gpu=<cdi-device>` | Inject a specific CDI device (e.g. `nvidia.com/gpu=all`). May be repeated for multiple devices. Note: because the cluster container runs privileged, device-level isolation may not work as expected. |
+
+Mixing `legacy` or auto-select with explicit CDI device names in the same invocation is an error.
 
 The expected smoke test is a plain pod requesting `nvidia.com/gpu: 1` with `runtimeClassName: nvidia` and running `nvidia-smi`.
 
