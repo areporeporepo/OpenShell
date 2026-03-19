@@ -1355,7 +1355,7 @@ pub async fn gateway_admin_deploy(
     disable_gateway_auth: bool,
     registry_username: Option<&str>,
     registry_token: Option<&str>,
-    gpu: bool,
+    gpu: Vec<String>,
 ) -> Result<()> {
     let location = if remote.is_some() { "remote" } else { "local" };
 

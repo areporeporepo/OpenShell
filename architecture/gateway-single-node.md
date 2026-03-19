@@ -316,6 +316,15 @@ Host GPU drivers & NVIDIA Container Toolkit
                 └─ Pods: request nvidia.com/gpu in resource limits
 ```
 
+### `--gpu` flag
+
+The `--gpu` flag on `gateway start` accepts an optional value that overrides the automatic injection mode:
+
+| Invocation | Behaviour |
+|---|---|
+| `--gpu` | Auto-select: CDI when enabled on the daemon, `--gpus all` otherwise |
+| `--gpu=legacy` | Force `--gpus all` |
+
 The expected smoke test is a plain pod requesting `nvidia.com/gpu: 1` with `runtimeClassName: nvidia` and running `nvidia-smi`.
 
 ## Remote Image Transfer

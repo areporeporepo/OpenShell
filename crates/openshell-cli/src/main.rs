@@ -807,8 +807,13 @@ enum GatewayCommands {
         /// NVIDIA k8s-device-plugin so Kubernetes workloads can request
         /// `nvidia.com/gpu` resources. Requires NVIDIA drivers and the
         /// NVIDIA Container Toolkit on the host.
-        #[arg(long)]
-        gpu: bool,
+        ///
+        /// An optional argument controls the injection mode:
+        ///
+        ///   --gpu            Auto-select: CDI when enabled on the daemon, legacy otherwise
+        ///   --gpu=legacy     Force legacy nvidia DeviceRequest
+        #[arg(long = "gpu", num_args = 0..=1, default_missing_value = "auto", value_name = "MODE")]
+        gpu: Option<String>,
     },
 
     /// Stop the gateway (preserves state).
@@ -1562,6 +1567,16 @@ async fn main() -> Result<()> {
                 registry_token,
                 gpu,
             } => {
+                let gpu = match gpu.as_deref() {
+                    None => vec![],
+                    Some("auto") => vec!["auto".to_string()],
+                    Some("legacy") => vec!["legacy".to_string()],
+                    Some(other) => {
+                        return Err(miette::miette!(
+                            "unknown --gpu value: {other:?}; expected `legacy`"
+                        ));
+                    }
+                };
                 run::gateway_admin_deploy(
                     &name,
                     remote.as_deref(),
