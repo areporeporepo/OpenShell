@@ -317,6 +317,45 @@ fi
 # the k3s manifests directory so the Helm controller installs it automatically.
 # The nvidia-container-runtime binary is already on PATH (baked into the image)
 # so k3s registers the "nvidia" RuntimeClass at startup.
+CDI_SPEC_DIR="/var/run/cdi"
+CDI_WSL_INPUT="${CDI_SPEC_DIR}/k8s.device-plugin.nvidia.com-gpu.json"
+CDI_WSL_OUTPUT="${CDI_SPEC_DIR}/openshell-wsl.json"
+
+transform_wsl_cdi_spec() {
+    local tmp="${CDI_WSL_OUTPUT}.tmp.$$"
+    if jq '.cdiVersion = "0.5.0" | .devices[0].name = "0"' \
+            "$CDI_WSL_INPUT" > "$tmp" 2>/dev/null; then
+        mv "$tmp" "$CDI_WSL_OUTPUT"
+        echo "CDI: transformed WSL spec -> $CDI_WSL_OUTPUT"
+    else
+        rm -f "$tmp"
+        echo "CDI: failed to transform WSL spec (jq error)"
+    fi
+}
+
+watch_cdi_specs() {
+    if ! command -v inotifywait > /dev/null 2>&1; then
+        echo "CDI: inotifywait not found, skipping spec watcher"
+        return 1
+    fi
+
+    mkdir -p "$CDI_SPEC_DIR"
+
+    # Process spec already present at startup (e.g. gateway restart)
+    if [ -f "$CDI_WSL_INPUT" ] && grep -q '/dev/dxg' "$CDI_WSL_INPUT" 2>/dev/null; then
+        transform_wsl_cdi_spec
+    fi
+
+    # Watch for the spec to appear or be updated
+    inotifywait -m -e close_write,moved_to --format '%f' "$CDI_SPEC_DIR" 2>/dev/null \
+    | while IFS= read -r filename; do
+        if [ "$filename" = "k8s.device-plugin.nvidia.com-gpu.json" ] \
+                && grep -q '/dev/dxg' "$CDI_WSL_INPUT" 2>/dev/null; then
+            transform_wsl_cdi_spec
+        fi
+    done
+}
+
 if [ "${GPU_ENABLED:-}" = "true" ]; then
     echo "GPU support enabled — deploying NVIDIA device plugin"
 
@@ -326,6 +365,11 @@ if [ "${GPU_ENABLED:-}" = "true" ]; then
             [ ! -f "$manifest" ] && continue
             cp "$manifest" "$K3S_MANIFESTS/"
         done
+    fi
+
+    if [ -c /dev/dxg ]; then
+        echo "WSL2 GPU detected (/dev/dxg present) — starting CDI spec watcher"
+        watch_cdi_specs &
     fi
 fi
 

@@ -229,6 +229,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     iptables \
     mount \
     dnsutils \
+    inotify-tools \
+    jq \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=k3s /bin/ /bin/
