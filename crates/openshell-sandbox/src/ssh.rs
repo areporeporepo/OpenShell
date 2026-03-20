@@ -4,6 +4,7 @@
 //! Embedded SSH server for sandbox access.
 
 use crate::child_env;
+use crate::cors_relay::{self, CorsConfigMap};
 use crate::policy::SandboxPolicy;
 use crate::process::drop_privileges;
 use crate::sandbox;
@@ -77,6 +78,7 @@ pub async fn run_ssh_server(
     proxy_url: Option<String>,
     ca_file_paths: Option<(PathBuf, PathBuf)>,
     provider_env: HashMap<String, String>,
+    cors_configs: CorsConfigMap,
 ) -> Result<()> {
     let (listener, config, ca_paths) = match ssh_server_init(listen_addr, &ca_file_paths).await {
         Ok(v) => {
@@ -121,6 +123,7 @@ pub async fn run_ssh_server(
         let ca_paths = ca_paths.clone();
         let provider_env = provider_env.clone();
         let nonce_cache = nonce_cache.clone();
+        let cors_configs = cors_configs.clone();
 
         tokio::spawn(async move {
             if let Err(err) = handle_connection(
@@ -136,6 +139,7 @@ pub async fn run_ssh_server(
                 ca_paths,
                 provider_env,
                 &nonce_cache,
+                cors_configs,
             )
             .await
             {
@@ -159,6 +163,7 @@ async fn handle_connection(
     ca_file_paths: Option<Arc<(PathBuf, PathBuf)>>,
     provider_env: HashMap<String, String>,
     nonce_cache: &NonceCache,
+    cors_configs: CorsConfigMap,
 ) -> Result<()> {
     info!(peer = %peer, "SSH connection: reading handshake preface");
     let mut line = String::new();
@@ -179,6 +184,7 @@ async fn handle_connection(
         proxy_url,
         ca_file_paths,
         provider_env,
+        cors_configs,
     );
     russh::server::run_stream(config, stream, handler)
         .await
@@ -270,6 +276,7 @@ struct SshHandler {
     proxy_url: Option<String>,
     ca_file_paths: Option<Arc<(PathBuf, PathBuf)>>,
     provider_env: HashMap<String, String>,
+    cors_configs: CorsConfigMap,
     input_sender: Option<mpsc::Sender<Vec<u8>>>,
     pty_master: Option<std::fs::File>,
     pty_request: Option<PtyRequest>,
@@ -283,6 +290,7 @@ impl SshHandler {
         proxy_url: Option<String>,
         ca_file_paths: Option<Arc<(PathBuf, PathBuf)>>,
         provider_env: HashMap<String, String>,
+        cors_configs: CorsConfigMap,
     ) -> Self {
         Self {
             policy,
@@ -291,6 +299,7 @@ impl SshHandler {
             proxy_url,
             ca_file_paths,
             provider_env,
+            cors_configs,
             input_sender: None,
             pty_master: None,
             pty_request: None,
@@ -348,6 +357,7 @@ impl russh::server::Handler for SshHandler {
         #[allow(clippy::cast_possible_truncation)]
         let port = port_to_connect as u16;
         let netns_fd = self.netns_fd;
+        let cors_configs = self.cors_configs.clone();
 
         tokio::spawn(async move {
             let addr = format!("{host}:{port}");
@@ -363,7 +373,25 @@ impl russh::server::Handler for SshHandler {
             let mut channel_stream = channel.into_stream();
             let mut tcp_stream = tcp;
 
-            let _ = tokio::io::copy_bidirectional(&mut channel_stream, &mut tcp_stream).await;
+            // Look up per-port CORS config. If configured, use the
+            // CORS-aware relay that injects headers on HTTP responses
+            // and validates Origin on WebSocket upgrades. Otherwise
+            // fall back to raw bidirectional copy (zero overhead).
+            let cors_config = cors_configs.read().await.get(&port).cloned();
+
+            if let Some(cors) = cors_config {
+                if let Err(err) =
+                    cors_relay::relay_with_cors(&mut channel_stream, &mut tcp_stream, &cors).await
+                {
+                    warn!(
+                        addr = %addr,
+                        error = %err,
+                        "direct-tcpip: CORS relay error"
+                    );
+                }
+            } else {
+                let _ = tokio::io::copy_bidirectional(&mut channel_stream, &mut tcp_stream).await;
+            }
         });
 
         Ok(true)

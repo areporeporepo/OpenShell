@@ -7,6 +7,7 @@
 
 pub mod bypass_monitor;
 mod child_env;
+pub mod cors_relay;
 pub mod denial_aggregator;
 mod grpc_client;
 mod identity;
@@ -34,6 +35,7 @@ use std::time::Duration;
 use tokio::time::timeout;
 use tracing::{debug, error, info, trace, warn};
 
+use crate::cors_relay::{CorsConfigMap, extract_cors_configs, new_cors_config_map};
 use crate::identity::BinaryIdentityCache;
 use crate::l7::tls::{
     CertCache, ProxyTlsState, SandboxCa, build_upstream_client_config, write_ca_files,
@@ -170,7 +172,7 @@ pub async fn run_sandbox(
     // Load policy and initialize OPA engine
     let openshell_endpoint_for_proxy = openshell_endpoint.clone();
     let sandbox_name_for_agg = sandbox.clone();
-    let (policy, opa_engine) = load_policy(
+    let (policy, opa_engine, cors_config_map) = load_policy(
         sandbox_id.clone(),
         sandbox,
         openshell_endpoint.clone(),
@@ -496,6 +498,7 @@ pub async fn run_sandbox(
         let netns_fd = ssh_netns_fd;
         let ca_paths = ca_file_paths.clone();
         let provider_env_clone = provider_env.clone();
+        let cors_map = cors_config_map.clone();
 
         let (ssh_ready_tx, ssh_ready_rx) = tokio::sync::oneshot::channel();
 
@@ -511,6 +514,7 @@ pub async fn run_sandbox(
                 proxy_url,
                 ca_paths,
                 provider_env_clone,
+                cors_map,
             )
             .await
             {
@@ -579,11 +583,17 @@ pub async fn run_sandbox(
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(10);
+        let poll_cors_map = cors_config_map.clone();
 
         tokio::spawn(async move {
-            if let Err(e) =
-                run_policy_poll_loop(&poll_endpoint, &poll_id, &poll_engine, poll_interval_secs)
-                    .await
+            if let Err(e) = run_policy_poll_loop(
+                &poll_endpoint,
+                &poll_id,
+                &poll_engine,
+                poll_interval_secs,
+                poll_cors_map,
+            )
+            .await
             {
                 warn!(error = %e, "Policy poll loop exited with error");
             }
@@ -959,7 +969,7 @@ async fn load_policy(
     openshell_endpoint: Option<String>,
     policy_rules: Option<String>,
     policy_data: Option<String>,
-) -> Result<(SandboxPolicy, Option<Arc<OpaEngine>>)> {
+) -> Result<(SandboxPolicy, Option<Arc<OpaEngine>>, CorsConfigMap)> {
     // File mode: load OPA engine from rego rules + YAML data (dev override)
     if let (Some(policy_file), Some(data_file)) = (&policy_rules, &policy_data) {
         info!(
@@ -983,7 +993,8 @@ async fn load_policy(
             process: config.process,
         };
         enrich_sandbox_baseline_paths(&mut policy);
-        return Ok((policy, Some(Arc::new(engine))));
+        // File mode has no proto policy available for CORS extraction.
+        return Ok((policy, Some(Arc::new(engine)), new_cors_config_map()));
     }
 
     // gRPC mode: fetch typed proto policy, construct OPA engine from baked rules + proto data
@@ -1042,8 +1053,18 @@ async fn load_policy(
         info!("Creating OPA engine from proto policy data");
         let opa_engine = Some(Arc::new(OpaEngine::from_proto(&proto_policy)?));
 
+        // Extract per-port CORS configs before converting proto → Rust policy.
+        let cors_configs = extract_cors_configs(&proto_policy);
+        let cors_config_map: CorsConfigMap = Arc::new(tokio::sync::RwLock::new(cors_configs));
+        if !cors_config_map.blocking_read().is_empty() {
+            info!(
+                port_count = cors_config_map.blocking_read().len(),
+                "CORS configs extracted from policy"
+            );
+        }
+
         let policy = SandboxPolicy::try_from(proto_policy)?;
-        return Ok((policy, opa_engine));
+        return Ok((policy, opa_engine, cors_config_map));
     }
 
     // No policy source available
@@ -1307,6 +1328,7 @@ async fn run_policy_poll_loop(
     sandbox_id: &str,
     opa_engine: &Arc<OpaEngine>,
     interval_secs: u64,
+    cors_config_map: CorsConfigMap,
 ) -> Result<()> {
     use crate::grpc_client::CachedOpenShellClient;
     use openshell_core::proto::PolicySource;
@@ -1377,6 +1399,10 @@ async fn run_policy_poll_loop(
 
             match opa_engine.reload_from_proto(policy) {
                 Ok(()) => {
+                    // Update CORS config from the new policy.
+                    let new_cors = extract_cors_configs(policy);
+                    *cors_config_map.write().await = new_cors;
+
                     if result.global_policy_version > 0 {
                         info!(
                             policy_hash = %result.policy_hash,

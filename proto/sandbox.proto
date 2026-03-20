@@ -85,6 +85,23 @@ message NetworkEndpoint {
   // If `port` is set and `ports` is empty, `port` is normalized to `ports: [port]`.
   // If both are set, `ports` takes precedence.
   repeated uint32 ports = 9;
+  // Optional CORS configuration for port-forwarded services on this endpoint.
+  // When set, the sandbox SSH direct-tcpip handler injects CORS headers on
+  // HTTP responses and validates Origin on WebSocket upgrade requests for
+  // the configured ports.
+  CorsConfig cors = 10;
+}
+
+// CORS configuration for port-forwarded sandbox services.
+//
+// Controls which browser origins can access services exposed via
+// `openshell forward`. For regular HTTP traffic, CORS response headers are
+// injected. For WebSocket upgrade requests, the Origin header is validated
+// and unauthorized upgrades are rejected with 403.
+message CorsConfig {
+  // Allowed origin URLs (e.g. "https://app.example.com").
+  // Use "*" to allow all origins (disables origin validation for WebSocket too).
+  repeated string allowed_origins = 1;
 }
 
 // An L7 policy rule (allow-only).
