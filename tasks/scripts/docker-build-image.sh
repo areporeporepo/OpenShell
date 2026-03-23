@@ -159,12 +159,8 @@ else
   exit 1
 fi
 
-# Default to dev-settings so local builds include test-only settings
-# (dummy_bool, dummy_int) that e2e tests depend on, matching CI behaviour.
-EXTRA_CARGO_FEATURES="${EXTRA_CARGO_FEATURES:-openshell-core/dev-settings}"
-
 FEATURE_ARGS=()
-if [[ -n "${EXTRA_CARGO_FEATURES}" ]]; then
+if [[ -n "${EXTRA_CARGO_FEATURES:-}" ]]; then
   FEATURE_ARGS=(--build-arg "EXTRA_CARGO_FEATURES=${EXTRA_CARGO_FEATURES}")
 fi
 
