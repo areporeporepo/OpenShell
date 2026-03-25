@@ -1,0 +1,23 @@
+.github/workflows/docker-build.yml
+  4758cbbcd8d15ecf 71-73,81-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "06f43ba4f5f0d5f184496c49261e4efe1ad3a22f",
+  "prompts": {
+    "4758cbbcd8d15ecf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7f076e5-1d71-43d9-a377-a68d14c7ff65",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "areporeporepo <areporeporepo@users.noreply.github.com>",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 1,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    }
+  }
+}
