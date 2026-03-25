@@ -767,7 +767,7 @@ window.addEventListener("load", load);</script>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/first-network-policy.html">First Network Policy</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/github-sandbox.html">GitHub Push Access</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../tutorials/local-inference-ollama.html">Inference with Ollama</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/inference-ollama.html">Inference with Ollama</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/local-inference-lmstudio.html">Local Inference with LM Studio</a></li>
 </ul>
 </details></li>
@@ -881,7 +881,6 @@ window.addEventListener("load", load);</script>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api.example.com</span>
 <span class="w">        </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">443</span>
 <span class="w">        </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rest</span>
-<span class="w">        </span><span class="nt">tls</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">terminate</span>
 <span class="w">        </span><span class="nt">enforcement</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">enforce</span>
 <span class="w">        </span><span class="nt">access</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">full</span>
 <span class="w">    </span><span class="nt">binaries</span><span class="p">:</span>
@@ -912,7 +911,7 @@ Dynamic sections can be updated on a running sandbox with <code class="docutils 
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">network_policies</span></code></p></td>
 <td><p>Dynamic</p></td>
-<td><p>Controls network access for ordinary outbound traffic from the sandbox. Each block has a name, a list of endpoints (host, port, protocol, and optional rules), and a list of binaries allowed to use those endpoints. <br>Every outbound connection except <code class="docutils literal notranslate"><span class="pre">https://inference.local</span></code> goes through the proxy, which queries the <a class="reference internal" href="../about/architecture.html"><span class="doc">policy engine</span></a> with the destination and calling binary. A connection is allowed only when both match an entry in the same policy block. <br>For endpoints with <code class="docutils literal notranslate"><span class="pre">protocol:</span> <span class="pre">rest</span></code> and <code class="docutils literal notranslate"><span class="pre">tls:</span> <span class="pre">terminate</span></code>, each HTTP request is also checked against that endpoint’s <code class="docutils literal notranslate"><span class="pre">rules</span></code> (method and path). <br>Endpoints without <code class="docutils literal notranslate"><span class="pre">protocol</span></code> or <code class="docutils literal notranslate"><span class="pre">tls</span></code> allow the TCP stream through without inspecting payloads. <br>If no endpoint matches, the connection is denied. Configure managed inference separately through <a class="reference internal" href="../inference/configure.html"><span class="doc">Configure Inference Routing</span></a>.</p></td>
+<td><p>Controls network access for ordinary outbound traffic from the sandbox. Each block has a name, a list of endpoints (host, port, protocol, and optional rules), and a list of binaries allowed to use those endpoints. <br>Every outbound connection except <code class="docutils literal notranslate"><span class="pre">https://inference.local</span></code> goes through the proxy, which queries the <a class="reference internal" href="../about/architecture.html"><span class="doc">policy engine</span></a> with the destination and calling binary. A connection is allowed only when both match an entry in the same policy block. <br>For endpoints with <code class="docutils literal notranslate"><span class="pre">protocol:</span> <span class="pre">rest</span></code>, the proxy auto-detects TLS and terminates it so each HTTP request is checked against that endpoint’s <code class="docutils literal notranslate"><span class="pre">rules</span></code> (method and path). <br>Endpoints without <code class="docutils literal notranslate"><span class="pre">protocol</span></code> allow the TCP stream through without inspecting payloads. <br>If no endpoint matches, the connection is denied. Configure managed inference separately through <a class="reference internal" href="../inference/configure.html"><span class="doc">Configure Inference Routing</span></a>.</p></td>
 </tr>
 </tbody>
 </table>
@@ -1030,7 +1029,7 @@ Simple endpoint</label><div class="sd-tab-content docutils">
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> path</span><span class="p">:</span><span class="w"> </span><span class="nv">/usr/local/bin/uv</span><span class="w"> </span><span class="p p-Indicator">}</span>
 </pre></div>
 </div>
-<p>Endpoints without <code class="docutils literal notranslate"><span class="pre">protocol</span></code> or <code class="docutils literal notranslate"><span class="pre">tls</span></code> use TCP passthrough — the proxy allows the stream without inspecting payloads.</p>
+<p>Endpoints without <code class="docutils literal notranslate"><span class="pre">protocol</span></code> use TCP passthrough, where the proxy allows the stream without inspecting payloads.</p>
 </div>
 <input id="sd-tab-item-1" name="sd-tab-set-0" type="radio">
 <label class="sd-tab-label" for="sd-tab-item-1">
@@ -1046,7 +1045,6 @@ Granular rules</label><div class="sd-tab-content docutils">
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api.github.com</span>
 <span class="w">        </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">443</span>
 <span class="w">        </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rest</span>
-<span class="w">        </span><span class="nt">tls</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">terminate</span>
 <span class="w">        </span><span class="nt">enforcement</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">enforce</span>
 <span class="w">        </span><span class="nt">rules</span><span class="p">:</span>
 <span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">allow</span><span class="p">:</span>
@@ -1075,7 +1073,7 @@ Granular rules</label><div class="sd-tab-content docutils">
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> path</span><span class="p">:</span><span class="w"> </span><span class="nv">/usr/bin/gh</span><span class="w"> </span><span class="p p-Indicator">}</span>
 </pre></div>
 </div>
-<p>Endpoints with <code class="docutils literal notranslate"><span class="pre">protocol:</span> <span class="pre">rest</span></code> and <code class="docutils literal notranslate"><span class="pre">tls:</span> <span class="pre">terminate</span></code> enable HTTP request inspection — the proxy decrypts TLS and checks each HTTP request against the <code class="docutils literal notranslate"><span class="pre">rules</span></code> list.</p>
+<p>Endpoints with <code class="docutils literal notranslate"><span class="pre">protocol:</span> <span class="pre">rest</span></code> enable HTTP request inspection. The proxy auto-detects TLS on HTTPS endpoints, terminates it, and checks each HTTP request against the <code class="docutils literal notranslate"><span class="pre">rules</span></code> list.</p>
 </div>
 </div>
 </section>

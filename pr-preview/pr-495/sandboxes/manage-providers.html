@@ -332,7 +332,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/first-network-policy.html">First Network Policy</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/github-sandbox.html">GitHub Push Access</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../tutorials/local-inference-ollama.html">Inference with Ollama</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/inference-ollama.html">Inference with Ollama</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/local-inference-lmstudio.html">Local Inference with LM Studio</a></li>
 </ul>
 </details></li>
@@ -591,13 +591,19 @@ environment variable names and values yourself with <code class="docutils litera
 <td><p><code class="docutils literal notranslate"><span class="pre">https://api.deepinfra.com/v1/openai</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">OPENAI_API_KEY</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p>Ollama (local)</p></td>
+<tr class="row-odd"><td><p>Groq</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">groq</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">openai</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">https://api.groq.com/openai/v1</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">OPENAI_API_KEY</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Ollama (local)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">ollama</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">openai</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">http://host.openshell.internal:11434/v1</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">OPENAI_API_KEY</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p>LM Studio (local)</p></td>
+<tr class="row-odd"><td><p>LM Studio (local)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">lmstudio</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">openai</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">http://host.openshell.internal:1234/v1</span></code></p></td>

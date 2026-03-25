@@ -332,7 +332,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/first-network-policy.html">First Network Policy</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/github-sandbox.html">GitHub Push Access</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../tutorials/local-inference-ollama.html">Inference with Ollama</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/inference-ollama.html">Inference with Ollama</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/local-inference-lmstudio.html">Local Inference with LM Studio</a></li>
 </ul>
 </details></li>
@@ -473,6 +473,11 @@ Local Endpoint</label><div class="sd-tab-content docutils">
 </pre></div>
 </div>
 <p>Use <code class="docutils literal notranslate"><span class="pre">--config</span> <span class="pre">OPENAI_BASE_URL</span></code> to point to any OpenAI-compatible server running where the gateway runs. For host-backed local inference, use <code class="docutils literal notranslate"><span class="pre">host.openshell.internal</span></code> or the host’s LAN IP. Avoid <code class="docutils literal notranslate"><span class="pre">127.0.0.1</span></code> and <code class="docutils literal notranslate"><span class="pre">localhost</span></code>. Set <code class="docutils literal notranslate"><span class="pre">OPENAI_API_KEY</span></code> to a dummy value if the server does not require authentication.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>For a self-contained setup, the Ollama community sandbox bundles Ollama inside the sandbox itself — no host-level provider needed. See <a class="reference internal" href="../tutorials/inference-ollama.html"><span class="doc">Run Local Inference with Ollama</span></a> for details.</p>
+</div>
+<p>Ollama also supports cloud-hosted models using the <code class="docutils literal notranslate"><span class="pre">:cloud</span></code> tag suffix (e.g., <code class="docutils literal notranslate"><span class="pre">qwen3.5:cloud</span></code>).</p>
 </div>
 <input id="sd-tab-item-3" name="sd-tab-set-0" type="radio">
 <label class="sd-tab-label" for="sd-tab-item-3">
@@ -559,7 +564,7 @@ Anthropic</label><div class="sd-tab-content docutils">
 <p>Explore related topics:</p>
 <ul class="simple">
 <li><p>To understand the inference routing flow and supported API patterns, refer to <a class="reference internal" href="index.html"><span class="doc">About Inference Routing</span></a>.</p></li>
-<li><p>To follow a complete Ollama-based local setup, refer to <a class="reference internal" href="../tutorials/local-inference-ollama.html"><span class="doc">Run Local Inference with Ollama</span></a>.</p></li>
+<li><p>To follow a complete Ollama-based local setup, refer to <a class="reference internal" href="../tutorials/inference-ollama.html"><span class="doc">Run Local Inference with Ollama</span></a>.</p></li>
 <li><p>To follow a complete LM Studio-based local setup, refer to <a class="reference internal" href="../tutorials/local-inference-lmstudio.html"><span class="doc">Route Local Inference Requests to LM Studio</span></a>.</p></li>
 <li><p>To control external endpoints, refer to <a class="reference internal" href="../sandboxes/policies.html"><span class="std std-doc">Policies</span></a>.</p></li>
 <li><p>To manage provider records, refer to <a class="reference internal" href="../sandboxes/manage-providers.html"><span class="doc">Manage Providers and Credentials</span></a>.</p></li>

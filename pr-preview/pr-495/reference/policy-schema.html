@@ -332,7 +332,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/first-network-policy.html">First Network Policy</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/github-sandbox.html">GitHub Push Access</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../tutorials/local-inference-ollama.html">Inference with Ollama</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/inference-ollama.html">Inference with Ollama</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/local-inference-lmstudio.html">Local Inference with LM Studio</a></li>
 </ul>
 </details></li>
@@ -679,7 +679,7 @@
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tls</span></code></p></td>
 <td><p>string</p></td>
 <td><p>No</p></td>
-<td><p>TLS handling mode. <code class="docutils literal notranslate"><span class="pre">terminate</span></code> decrypts TLS at the proxy for inspection. <code class="docutils literal notranslate"><span class="pre">passthrough</span></code> forwards encrypted traffic without inspection. Only relevant when <code class="docutils literal notranslate"><span class="pre">protocol</span></code> is <code class="docutils literal notranslate"><span class="pre">rest</span></code>.</p></td>
+<td><p>TLS handling mode. The proxy auto-detects TLS by peeking the first bytes of each connection and terminates it when <code class="docutils literal notranslate"><span class="pre">protocol</span></code> is <code class="docutils literal notranslate"><span class="pre">rest</span></code>, so this field is optional in most cases. Set to <code class="docutils literal notranslate"><span class="pre">skip</span></code> to disable auto-detection for edge cases such as client-certificate mTLS or non-standard protocols. The values <code class="docutils literal notranslate"><span class="pre">terminate</span></code> and <code class="docutils literal notranslate"><span class="pre">passthrough</span></code> are deprecated and log a warning; they are still accepted for backward compatibility but have no effect on behavior.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">enforcement</span></code></p></td>
 <td><p>string</p></td>
@@ -790,7 +790,6 @@
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api.github.com</span>
 <span class="w">        </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">443</span>
 <span class="w">        </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rest</span>
-<span class="w">        </span><span class="nt">tls</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">terminate</span>
 <span class="w">        </span><span class="nt">enforcement</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">enforce</span>
 <span class="w">        </span><span class="nt">access</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">read-only</span>
 <span class="w">    </span><span class="nt">binaries</span><span class="p">:</span>
