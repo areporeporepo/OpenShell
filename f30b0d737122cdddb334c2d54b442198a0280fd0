@@ -1,0 +1,35 @@
+crates/openshell-bootstrap/src/image.rs
+  4758cbbcd8d15ecf 41-51
+crates/openshell-bootstrap/src/krun.rs
+  4758cbbcd8d15ecf 4,6-16,18-19,21-23,25-32,34-38,40-41,43-346,348-350,353-439
+crates/openshell-bootstrap/tests/gateway_runtime_integration.rs
+  4758cbbcd8d15ecf 130-131,134-141,147-148,151-159
+crates/openshell-bootstrap/Cargo.toml
+  4758cbbcd8d15ecf 27-32
+crates/openshell-bootstrap/tests/krun_gateway_smoke_integration.rs
+  4758cbbcd8d15ecf 1-105
+architecture/gateway.md
+  4758cbbcd8d15ecf 577,580-592
+crates/openshell-bootstrap/src/lib.rs
+  4758cbbcd8d15ecf 219,221-224,227-244,250-254,259-272,276,278,280,284,286,288,337,600,604,634,638
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "f30b0d737122cdddb334c2d54b442198a0280fd0",
+  "prompts": {
+    "4758cbbcd8d15ecf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7f076e5-1d71-43d9-a377-a68d14c7ff65",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "areporeporepo <areporeporepo@users.noreply.github.com>",
+      "messages": [],
+      "total_additions": 657,
+      "total_deletions": 57,
+      "accepted_lines": 641,
+      "overriden_lines": 4
+    }
+  }
+}
