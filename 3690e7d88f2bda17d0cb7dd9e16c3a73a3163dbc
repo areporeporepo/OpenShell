@@ -1,0 +1,31 @@
+.github/workflows/e2e-test.yml
+  4758cbbcd8d15ecf 14,28,30,36-38,43,54,58
+.github/DEV-CI-README.md
+  4758cbbcd8d15ecf 1-33
+.github/workflows/branch-e2e.yml
+  4758cbbcd8d15ecf 17-18,25-26,33
+.github/workflows/branch-checks.yml
+  4758cbbcd8d15ecf 18,22-23,29-30,34-37,39-40,45,58-59,63-64
+.github/workflows/docker-build.yml
+  4758cbbcd8d15ecf 14,24,29,50,61-62,78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "3690e7d88f2bda17d0cb7dd9e16c3a73a3163dbc",
+  "prompts": {
+    "4758cbbcd8d15ecf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7f076e5-1d71-43d9-a377-a68d14c7ff65",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "areporeporepo <areporeporepo@users.noreply.github.com>",
+      "messages": [],
+      "total_additions": 71,
+      "total_deletions": 83,
+      "accepted_lines": 71,
+      "overriden_lines": 0
+    }
+  }
+}
