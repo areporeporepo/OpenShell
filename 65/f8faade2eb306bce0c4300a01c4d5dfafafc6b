@@ -1,0 +1,29 @@
+crates/openshell-bootstrap/src/gateway_runtime.rs
+  4758cbbcd8d15ecf 29
+crates/openshell-bootstrap/src/lib.rs
+  4758cbbcd8d15ecf 283
+crates/openshell-bootstrap/tests/gateway_runtime_integration.rs
+  4758cbbcd8d15ecf 10-12,112,117-127
+architecture/gateway.md
+  4758cbbcd8d15ecf 580-581
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "65f8faade2eb306bce0c4300a01c4d5dfafafc6b",
+  "prompts": {
+    "4758cbbcd8d15ecf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7f076e5-1d71-43d9-a377-a68d14c7ff65",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "areporeporepo <areporeporepo@users.noreply.github.com>",
+      "messages": [],
+      "total_additions": 22,
+      "total_deletions": 5,
+      "accepted_lines": 21,
+      "overriden_lines": 0
+    }
+  }
+}
