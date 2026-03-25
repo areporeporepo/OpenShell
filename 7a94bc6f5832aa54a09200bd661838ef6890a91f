@@ -1,0 +1,21 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "7a94bc6f5832aa54a09200bd661838ef6890a91f",
+  "prompts": {
+    "4758cbbcd8d15ecf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7f076e5-1d71-43d9-a377-a68d14c7ff65",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "areporeporepo <areporeporepo@users.noreply.github.com>",
+      "messages": [],
+      "total_additions": 685,
+      "total_deletions": 28,
+      "accepted_lines": 685,
+      "overriden_lines": 0
+    }
+  }
+}
