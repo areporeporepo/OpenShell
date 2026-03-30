@@ -41,6 +41,9 @@ impl Router {
         connect_timeout: Duration,
         read_timeout: Duration,
     ) -> Result<reqwest::Client, RouterError> {
+        // Do not set a total request deadline here. Streaming inference
+        // responses can remain open for a long time as long as data keeps
+        // flowing; connect/read timeouts are enough to bound hung sockets.
         reqwest::Client::builder()
             .connect_timeout(connect_timeout)
             .read_timeout(read_timeout)

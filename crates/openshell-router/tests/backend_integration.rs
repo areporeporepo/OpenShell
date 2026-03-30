@@ -513,11 +513,7 @@ async fn streaming_proxy_survives_long_inter_chunk_gap_with_read_timeout() {
         Some(bytes::Bytes::from_static(b"hello"))
     );
 
-    let second_chunk = {
-        let next_chunk = response.next_chunk();
-        tokio::pin!(next_chunk);
-        next_chunk.await.unwrap()
-    };
+    let second_chunk = response.next_chunk().await.unwrap();
     assert_eq!(second_chunk, Some(bytes::Bytes::from_static(b"world")));
     assert_eq!(response.next_chunk().await.unwrap(), None);
 
@@ -552,11 +548,7 @@ async fn streaming_proxy_times_out_when_inter_chunk_gap_exceeds_read_timeout() {
         Some(bytes::Bytes::from_static(b"hello"))
     );
 
-    let err = {
-        let next_chunk = response.next_chunk();
-        tokio::pin!(next_chunk);
-        next_chunk.await.unwrap_err()
-    };
+    let err = response.next_chunk().await.unwrap_err();
     assert!(
         matches!(err, openshell_router::RouterError::UpstreamProtocol(ref details) if details.contains("failed to read response chunk")),
         "expected streaming chunk read failure after idle timeout, got: {err:?}"
