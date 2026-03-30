@@ -85,26 +85,7 @@ async fn parse_http_request<C: AsyncRead + Unpin>(client: &mut C) -> Result<Opti
         }
     }
 
-    // Parse request line
-    let header_end = buf.windows(4).position(|w| w == b"\r\n\r\n").unwrap() + 4;
-
-    // Reject bare LF in headers (must use \r\n line endings per RFC 7230).
-    // Bare LF can cause parsing discrepancies between this proxy and upstream
-    // servers, enabling request smuggling via header injection.
-    for i in 0..header_end {
-        if buf[i] == b'\n' && (i == 0 || buf[i - 1] != b'\r') {
-            return Err(miette!(
-                "HTTP headers contain bare LF (line feed without carriage return)"
-            ));
-        }
-    }
-
-    // Strict UTF-8 validation. from_utf8_lossy would silently replace invalid
-    // bytes with U+FFFD, creating an interpretation gap between this proxy
-    // (which parses the lossy string) and upstream servers (which receive the
-    // raw bytes). This gap enables request smuggling via mutated header names.
-    let header_str = std::str::from_utf8(&buf[..header_end])
-        .map_err(|_| miette!("HTTP headers contain invalid UTF-8"))?;
+    let header_str = parse_request_header_block(&buf)?;
 
     let request_line = header_str
         .lines()
@@ -275,6 +256,36 @@ fn parse_body_length(headers: &str) -> Result<BodyLength> {
         return Ok(BodyLength::ContentLength(len));
     }
     Ok(BodyLength::None)
+}
+
+/// Parse and validate an HTTP request header block.
+///
+/// Rejects incomplete header blocks, bare LF line endings, and invalid UTF-8 to
+/// keep proxy/header interpretation aligned with what upstream will receive.
+pub(crate) fn parse_request_header_block(header_bytes: &[u8]) -> Result<&str> {
+    let header_end = header_bytes
+        .windows(4)
+        .position(|w| w == b"\r\n\r\n")
+        .map(|pos| pos + 4)
+        .ok_or_else(|| miette!("HTTP request missing complete header block"))?;
+
+    // Reject bare LF in headers (must use \r\n line endings per RFC 7230).
+    // Bare LF can cause parsing discrepancies between this proxy and upstream
+    // servers, enabling request smuggling via header injection.
+    for i in 0..header_end {
+        if header_bytes[i] == b'\n' && (i == 0 || header_bytes[i - 1] != b'\r') {
+            return Err(miette!(
+                "HTTP headers contain bare LF (line feed without carriage return)"
+            ));
+        }
+    }
+
+    // Strict UTF-8 validation. from_utf8_lossy would silently replace invalid
+    // bytes with U+FFFD, creating an interpretation gap between this proxy
+    // (which parses the lossy string) and upstream servers (which receive the
+    // raw bytes). This gap enables request smuggling via mutated header names.
+    std::str::from_utf8(&header_bytes[..header_end])
+        .map_err(|_| miette!("HTTP headers contain invalid UTF-8"))
 }
 
 /// Validate request body framing headers without parsing or relaying the body.

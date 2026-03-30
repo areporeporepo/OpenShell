@@ -1724,28 +1724,14 @@ async fn handle_forward_proxy(
         return Ok(());
     }
 
-    let header_end = match buf[..used]
-        .windows(4)
-        .position(|window| window == b"\r\n\r\n")
-    {
-        Some(pos) => pos + 4,
-        None => {
-            warn!(
-                dst_host = %host_lc,
-                dst_port = port,
-                "FORWARD rejected: missing complete HTTP header block"
-            );
-            respond(client, b"HTTP/1.1 400 Bad Request\r\n\r\n").await?;
-            return Ok(());
-        }
-    };
-    let header_str = match std::str::from_utf8(&buf[..header_end]) {
+    let header_str = match crate::l7::rest::parse_request_header_block(&buf[..used]) {
         Ok(headers) => headers,
-        Err(_) => {
+        Err(e) => {
             warn!(
                 dst_host = %host_lc,
                 dst_port = port,
-                "FORWARD rejected: invalid UTF-8 in HTTP headers"
+                error = %e,
+                "FORWARD rejected malformed HTTP headers"
             );
             respond(client, b"HTTP/1.1 400 Bad Request\r\n\r\n").await?;
             return Ok(());
