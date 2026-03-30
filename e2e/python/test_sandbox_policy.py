@@ -271,6 +271,32 @@ def _forward_proxy_raw():
     return fn
 
 
+def _forward_proxy_raw_request():
+    """Return a closure that sends a caller-provided raw forward-proxy request."""
+
+    def fn(proxy_host, proxy_port, raw_request):
+        import socket
+
+        conn = socket.create_connection((proxy_host, int(proxy_port)), timeout=10)
+        try:
+            conn.sendall(raw_request.encode("latin1"))
+            data = b""
+            conn.settimeout(5)
+            try:
+                while True:
+                    chunk = conn.recv(4096)
+                    if not chunk:
+                        break
+                    data += chunk
+            except socket.timeout:
+                pass
+            return data.decode("latin1", errors="replace")
+        finally:
+            conn.close()
+
+    return fn
+
+
 def test_policy_applies_to_exec_commands(
     sandbox: Callable[..., Sandbox],
 ) -> None:
@@ -1599,6 +1625,83 @@ def test_forward_proxy_log_fields(
         assert f"dst_host={_SANDBOX_IP}" in log, "Expected dst_host in FORWARD log"
         assert f"dst_port={_FORWARD_PROXY_PORT}" in log, (
             "Expected dst_port in FORWARD log"
+        )
+
+
+def test_forward_proxy_rejects_dual_content_length_and_transfer_encoding(
+    sandbox: Callable[..., Sandbox],
+) -> None:
+    """FWD-7: Forward proxy rejects CL/TE ambiguity with 400."""
+    policy = _base_policy(
+        network_policies={
+            "internal_http": sandbox_pb2.NetworkPolicyRule(
+                name="internal_http",
+                endpoints=[
+                    sandbox_pb2.NetworkEndpoint(
+                        host=_SANDBOX_IP,
+                        port=_FORWARD_PROXY_PORT,
+                        allowed_ips=["10.200.0.0/24"],
+                    ),
+                ],
+                binaries=[sandbox_pb2.NetworkBinary(path="/**")],
+            ),
+        },
+    )
+    spec = datamodel_pb2.SandboxSpec(policy=policy)
+    raw_request = (
+        f"POST http://{_SANDBOX_IP}:{_FORWARD_PROXY_PORT}/test HTTP/1.1\r\n"
+        f"Host: {_SANDBOX_IP}:{_FORWARD_PROXY_PORT}\r\n"
+        "Content-Length: 5\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "\r\n"
+        "hello"
+    )
+    with sandbox(spec=spec, delete_on_exit=True) as sb:
+        result = sb.exec_python(
+            _forward_proxy_raw_request(),
+            args=(_PROXY_HOST, _PROXY_PORT, raw_request),
+        )
+        assert result.exit_code == 0, result.stderr
+        assert "400 Bad Request" in result.stdout, (
+            f"Expected 400 for CL/TE ambiguity, got: {result.stdout}"
+        )
+
+
+def test_forward_proxy_rejects_conflicting_duplicate_content_length(
+    sandbox: Callable[..., Sandbox],
+) -> None:
+    """FWD-8: Forward proxy rejects conflicting duplicate Content-Length with 400."""
+    policy = _base_policy(
+        network_policies={
+            "internal_http": sandbox_pb2.NetworkPolicyRule(
+                name="internal_http",
+                endpoints=[
+                    sandbox_pb2.NetworkEndpoint(
+                        host=_SANDBOX_IP,
+                        port=_FORWARD_PROXY_PORT,
+                        allowed_ips=["10.200.0.0/24"],
+                    ),
+                ],
+                binaries=[sandbox_pb2.NetworkBinary(path="/**")],
+            ),
+        },
+    )
+    spec = datamodel_pb2.SandboxSpec(policy=policy)
+    raw_request = (
+        f"POST http://{_SANDBOX_IP}:{_FORWARD_PROXY_PORT}/test HTTP/1.1\r\n"
+        f"Host: {_SANDBOX_IP}:{_FORWARD_PROXY_PORT}\r\n"
+        "Content-Length: 0\r\n"
+        "Content-Length: 50\r\n"
+        "\r\n"
+    )
+    with sandbox(spec=spec, delete_on_exit=True) as sb:
+        result = sb.exec_python(
+            _forward_proxy_raw_request(),
+            args=(_PROXY_HOST, _PROXY_PORT, raw_request),
+        )
+        assert result.exit_code == 0, result.stderr
+        assert "400 Bad Request" in result.stdout, (
+            f"Expected 400 for conflicting duplicate Content-Length, got: {result.stdout}"
         )
 
 

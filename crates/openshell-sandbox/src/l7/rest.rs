@@ -277,6 +277,16 @@ fn parse_body_length(headers: &str) -> Result<BodyLength> {
     Ok(BodyLength::None)
 }
 
+/// Validate request body framing headers without parsing or relaying the body.
+///
+/// Used by the plain forward proxy path to reject ambiguous framing (for
+/// example CL/TE combinations or conflicting duplicate `Content-Length`
+/// headers) before the request is forwarded upstream.
+pub(crate) fn validate_request_framing(headers: &str) -> Result<()> {
+    let _ = parse_body_length(headers)?;
+    Ok(())
+}
+
 /// Relay exactly `len` bytes from reader to writer.
 async fn relay_fixed<R, W>(reader: &mut R, writer: &mut W, len: u64) -> Result<()>
 where

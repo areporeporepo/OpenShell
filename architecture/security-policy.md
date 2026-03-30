@@ -712,9 +712,10 @@ If any condition fails, the proxy returns `403 Forbidden`.
 3. Evaluates OPA policy (same `evaluate_opa_tcp` as CONNECT)
 4. Requires `allowed_ips` on the matched endpoint
 5. Resolves DNS and validates all IPs are private and within `allowed_ips`
-6. Connects to upstream
-7. Rewrites the request: absolute-form → origin-form (`GET /path HTTP/1.1`), strips hop-by-hop headers, adds `Via: 1.1 openshell-sandbox` and `Connection: close`
-8. Forwards the rewritten request, then relays bidirectionally using `tokio::io::copy_bidirectional` (supports chunked transfer, SSE streams, and other long-lived responses with no idle timeout)
+6. Rejects malformed request framing with `400 Bad Request` when the request contains both `Content-Length` and `Transfer-Encoding` or conflicting duplicate `Content-Length` headers
+7. Connects to upstream
+8. Rewrites the request: absolute-form → origin-form (`GET /path HTTP/1.1`), strips hop-by-hop headers, adds `Via: 1.1 openshell-sandbox` and `Connection: close`
+9. Forwards the rewritten request, then relays bidirectionally using `tokio::io::copy_bidirectional` (supports chunked transfer, SSE streams, and other long-lived responses with no idle timeout)
 
 **V1 simplifications**: Forward proxy v1 injects `Connection: close` (no keep-alive). Every forward proxy connection handles exactly one request-response exchange. When an endpoint has L7 rules configured, the forward proxy evaluates the single request's method and path against L7 policy before forwarding.
 

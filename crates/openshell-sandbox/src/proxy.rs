@@ -1724,6 +1724,44 @@ async fn handle_forward_proxy(
         return Ok(());
     }
 
+    let header_end = match buf[..used]
+        .windows(4)
+        .position(|window| window == b"\r\n\r\n")
+    {
+        Some(pos) => pos + 4,
+        None => {
+            warn!(
+                dst_host = %host_lc,
+                dst_port = port,
+                "FORWARD rejected: missing complete HTTP header block"
+            );
+            respond(client, b"HTTP/1.1 400 Bad Request\r\n\r\n").await?;
+            return Ok(());
+        }
+    };
+    let header_str = match std::str::from_utf8(&buf[..header_end]) {
+        Ok(headers) => headers,
+        Err(_) => {
+            warn!(
+                dst_host = %host_lc,
+                dst_port = port,
+                "FORWARD rejected: invalid UTF-8 in HTTP headers"
+            );
+            respond(client, b"HTTP/1.1 400 Bad Request\r\n\r\n").await?;
+            return Ok(());
+        }
+    };
+    if let Err(e) = crate::l7::rest::validate_request_framing(header_str) {
+        warn!(
+            dst_host = %host_lc,
+            dst_port = port,
+            error = %e,
+            "FORWARD rejected malformed request framing"
+        );
+        respond(client, b"HTTP/1.1 400 Bad Request\r\n\r\n").await?;
+        return Ok(());
+    }
+
     // 3. Evaluate OPA policy (same identity binding as CONNECT)
     let peer_addr = client.peer_addr().into_diagnostic()?;
     let local_addr = client.local_addr().into_diagnostic()?;
