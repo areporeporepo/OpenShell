@@ -709,13 +709,14 @@ If any condition fails, the proxy returns `403 Forbidden`.
 
 1. Parses the absolute-form URI to extract scheme, host, port, and path (`parse_proxy_uri`)
 2. Rejects `https://` — clients must use CONNECT for TLS
-3. Evaluates OPA policy (same `evaluate_opa_tcp` as CONNECT)
-4. Requires `allowed_ips` on the matched endpoint
-5. Resolves DNS and validates all IPs are private and within `allowed_ips`
-6. Rejects malformed request framing with `400 Bad Request` when the request contains both `Content-Length` and `Transfer-Encoding` or conflicting duplicate `Content-Length` headers
-7. Connects to upstream
-8. Rewrites the request: absolute-form → origin-form (`GET /path HTTP/1.1`), strips hop-by-hop headers, adds `Via: 1.1 openshell-sandbox` and `Connection: close`
-9. Forwards the rewritten request, then relays bidirectionally using `tokio::io::copy_bidirectional` (supports chunked transfer, SSE streams, and other long-lived responses with no idle timeout)
+3. Rejects malformed request headers with `400 Bad Request` before policy evaluation
+4. Rejects malformed request framing with `400 Bad Request` when the request contains both `Content-Length` and `Transfer-Encoding` or conflicting duplicate `Content-Length` headers
+5. Evaluates OPA policy (same `evaluate_opa_tcp` as CONNECT)
+6. Requires `allowed_ips` on the matched endpoint
+7. Resolves DNS and validates all IPs are private and within `allowed_ips`
+8. Connects to upstream
+9. Rewrites the request: absolute-form → origin-form (`GET /path HTTP/1.1`), strips hop-by-hop headers, adds `Via: 1.1 openshell-sandbox` and `Connection: close`
+10. Forwards the rewritten request, then relays bidirectionally using `tokio::io::copy_bidirectional` (supports chunked transfer, SSE streams, and other long-lived responses with no idle timeout)
 
 **V1 simplifications**: Forward proxy v1 injects `Connection: close` (no keep-alive). Every forward proxy connection handles exactly one request-response exchange. When an endpoint has L7 rules configured, the forward proxy evaluates the single request's method and path against L7 policy before forwarding.
 
@@ -732,17 +733,20 @@ flowchart TD
     A["Non-CONNECT request received<br/>e.g. GET http://host/path"] --> B["parse_proxy_uri(uri)"]
     B --> C{Scheme = http?}
     C -- No --> D["403 Forbidden<br/>(HTTPS must use CONNECT)"]
-    C -- Yes --> E["OPA policy evaluation"]
-    E --> F{Allowed?}
-    F -- No --> G["403 Forbidden"]
-    F -- Yes --> H{allowed_ips on endpoint?}
-    H -- No --> I["403 Forbidden<br/>(forward proxy requires allowed_ips)"]
-    H -- Yes --> J["resolve_and_check_allowed_ips()"]
-    J --> K{All IPs private<br/>AND in allowlist?}
-    K -- No --> L["403 Forbidden"]
-    K -- Yes --> M["TCP connect to upstream"]
-    M --> N["Rewrite request to origin-form<br/>Add Via + Connection: close"]
-    N --> O["Forward request + copy_bidirectional"]
+    C -- Yes --> E["parse_request_header_block()<br/>+ validate_request_framing()"]
+    E --> F{Headers and framing valid?}
+    F -- No --> G["400 Bad Request"]
+    F -- Yes --> H["OPA policy evaluation"]
+    H --> I{Allowed?}
+    I -- No --> J["403 Forbidden"]
+    I -- Yes --> K{allowed_ips on endpoint?}
+    K -- No --> L["403 Forbidden<br/>(forward proxy requires allowed_ips)"]
+    K -- Yes --> M["resolve_and_check_allowed_ips()"]
+    M --> N{All IPs private<br/>AND in allowlist?}
+    N -- No --> O["403 Forbidden"]
+    N -- Yes --> P["TCP connect to upstream"]
+    P --> Q["Rewrite request to origin-form<br/>Add Via + Connection: close"]
+    Q --> R["Forward request + copy_bidirectional"]
 ```
 
 #### Example: Forward Proxy Policy
@@ -1047,7 +1051,10 @@ flowchart TD
     M -- Yes --> K
     K --> N["200 Connection Established"]
 
-    FP --> FP_OPA["OPA evaluation + require allowed_ips"]
+    FP --> FP_PARSE["Header parse + framing validation"]
+    FP_PARSE --> FP_PARSE_OK{Valid?}
+    FP_PARSE_OK -- No --> FP_BAD["400 Bad Request"]
+    FP_PARSE_OK -- Yes --> FP_OPA["OPA evaluation + require allowed_ips"]
     FP_OPA --> FP_RESOLVE["resolve_and_check_allowed_ips"]
     FP_RESOLVE --> FP_PRIVATE{All IPs private?}
     FP_PRIVATE -- No --> J

@@ -284,8 +284,26 @@ pub(crate) fn parse_request_header_block(header_bytes: &[u8]) -> Result<&str> {
     // bytes with U+FFFD, creating an interpretation gap between this proxy
     // (which parses the lossy string) and upstream servers (which receive the
     // raw bytes). This gap enables request smuggling via mutated header names.
-    std::str::from_utf8(&header_bytes[..header_end])
-        .map_err(|_| miette!("HTTP headers contain invalid UTF-8"))
+    let header_str = std::str::from_utf8(&header_bytes[..header_end])
+        .map_err(|_| miette!("HTTP headers contain invalid UTF-8"))?;
+
+    // RFC 7230 rejects whitespace between a header field-name and `:`. Being
+    // strict here avoids interpretation drift with upstreams that may trim or
+    // normalize such lines differently.
+    for line in header_str.split("\r\n").skip(1) {
+        if line.is_empty() {
+            break;
+        }
+        if let Some((name, _value)) = line.split_once(':')
+            && name.ends_with([' ', '\t'])
+        {
+            return Err(miette!(
+                "HTTP headers contain whitespace before colon in header name"
+            ));
+        }
+    }
+
+    Ok(header_str)
 }
 
 /// Validate request body framing headers without parsing or relaying the body.
@@ -812,6 +830,23 @@ mod tests {
         });
         let result = parse_http_request(&mut client).await;
         assert!(result.is_err(), "Must reject headers with invalid UTF-8");
+    }
+
+    /// SEC-009: Reject whitespace between header field-name and colon.
+    #[tokio::test]
+    async fn reject_whitespace_before_header_colon() {
+        let (mut client, mut writer) = tokio::io::duplex(4096);
+        tokio::spawn(async move {
+            writer
+                .write_all(b"GET /api HTTP/1.1\r\nHost : x\r\n\r\n")
+                .await
+                .unwrap();
+        });
+        let result = parse_http_request(&mut client).await;
+        assert!(
+            result.is_err(),
+            "Must reject headers with whitespace before colon"
+        );
     }
 
     /// SEC-009: Reject unsupported HTTP versions.
