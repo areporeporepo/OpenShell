@@ -317,34 +317,41 @@ async fn send_deny_response<C: AsyncWrite + Unpin>(
 /// `Content-Length` and `Transfer-Encoding` headers to prevent request
 /// smuggling via CL/TE ambiguity.
 fn parse_body_length(headers: &str) -> Result<BodyLength> {
+    let mut has_te = false;
     let mut has_te_chunked = false;
     let mut cl_value: Option<u64> = None;
 
     for line in headers.lines().skip(1) {
-        let lower = line.to_ascii_lowercase();
-        if lower.starts_with("transfer-encoding:") {
-            let val = lower.split_once(':').map_or("", |(_, v)| v.trim());
-            if val.split(',').any(|enc| enc.trim() == "chunked") {
-                has_te_chunked = true;
-            }
-        }
-        if lower.starts_with("content-length:") {
-            let val = lower.split_once(':').map_or("", |(_, v)| v.trim());
-            let len: u64 = val
-                .parse()
-                .map_err(|_| miette!("Request contains invalid Content-Length value"))?;
-            if let Some(prev) = cl_value {
-                if prev != len {
-                    return Err(miette!(
-                        "Request contains multiple Content-Length headers with differing values ({prev} vs {len})"
-                    ));
+        if let Some((name, value)) = line.split_once(':') {
+            let name = name.trim().to_ascii_lowercase();
+            let value = value.trim().to_ascii_lowercase();
+            if name == "transfer-encoding" {
+                has_te = true;
+                if value.split(',').any(|enc| enc.trim() == "chunked") {
+                    has_te_chunked = true;
                 }
             }
-            cl_value = Some(len);
+            if name == "content-length" {
+                let len: u64 = value
+                    .parse()
+                    .map_err(|_| miette!("Request contains invalid Content-Length value"))?;
+                if let Some(prev) = cl_value {
+                    if prev != len {
+                        return Err(miette!(
+                            "Request contains multiple Content-Length headers with differing values ({prev} vs {len})"
+                        ));
+                    }
+                }
+                cl_value = Some(len);
+            }
         }
     }
 
-    if has_te_chunked && cl_value.is_some() {
+    // RFC 7230 Section 3.3.3: ANY Transfer-Encoding with Content-Length must
+    // be rejected, not just chunked.  Non-framing TE values (gzip, deflate,
+    // identity) can cause upstream servers to interpret body boundaries
+    // differently than this proxy, enabling request smuggling.
+    if has_te && cl_value.is_some() {
         return Err(miette!(
             "Request contains both Transfer-Encoding and Content-Length headers"
         ));
@@ -922,13 +929,61 @@ mod tests {
     }
 
     /// SEC: Transfer-Encoding substring match must not match partial tokens.
+    /// "chunkedx" alone (without CL) should not trigger chunked decoding.
     #[test]
     fn te_substring_not_chunked() {
         let headers = "POST /api HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunkedx\r\n\r\n";
         match parse_body_length(headers).unwrap() {
             BodyLength::None => {}
-            other => panic!("Expected None for non-matching TE, got {other:?}"),
+            other => panic!("Expected None for non-matching TE without CL, got {other:?}"),
         }
+    }
+
+    /// SEC: Reject non-chunked TE (gzip) combined with Content-Length.
+    /// RFC 7230 Section 3.3.3 requires rejecting ANY TE + CL combination,
+    /// not just chunked + CL, to prevent body framing ambiguity.
+    #[test]
+    fn reject_te_gzip_with_content_length() {
+        let headers =
+            "POST /api HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: gzip\r\nContent-Length: 5\r\n\r\n";
+        assert!(
+            parse_body_length(headers).is_err(),
+            "Must reject TE: gzip + CL"
+        );
+    }
+
+    /// SEC: Reject TE: identity combined with Content-Length.
+    #[test]
+    fn reject_te_identity_with_content_length() {
+        let headers = "POST /api HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: identity\r\nContent-Length: 5\r\n\r\n";
+        assert!(
+            parse_body_length(headers).is_err(),
+            "Must reject TE: identity + CL"
+        );
+    }
+
+    /// SEC: Reject TE: deflate combined with Content-Length.
+    #[test]
+    fn reject_te_deflate_with_content_length() {
+        let headers = "POST /api HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: deflate\r\nContent-Length: 5\r\n\r\n";
+        assert!(
+            parse_body_length(headers).is_err(),
+            "Must reject TE: deflate + CL"
+        );
+    }
+
+    /// SEC: Non-chunked TE + CL must be rejected even with space-before-colon.
+    #[test]
+    fn reject_te_with_cl_space_before_colon() {
+        // This test ensures the split_once(':') parsing correctly detects TE
+        // headers even with unusual whitespace.
+        let headers = "POST /api HTTP/1.1\r\nHost: x\r\nTransfer-Encoding : gzip\r\nContent-Length: 5\r\n\r\n";
+        // split_once(':') on "Transfer-Encoding : gzip" yields
+        // name="Transfer-Encoding " which after trim() = "transfer-encoding"
+        assert!(
+            parse_body_length(headers).is_err(),
+            "Must reject TE + CL even with space before colon"
+        );
     }
 
     /// SEC-009: Bare LF in headers enables header injection.

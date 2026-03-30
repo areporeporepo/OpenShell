@@ -128,6 +128,7 @@ pub fn try_parse_http_request(buf: &[u8]) -> ParseResult {
     let mut headers = Vec::new();
     let mut content_length: usize = 0;
     let mut has_content_length = false;
+    let mut has_te = false;
     let mut is_chunked = false;
     for line in lines {
         if line.is_empty() {
@@ -153,18 +154,24 @@ pub fn try_parse_http_request(buf: &[u8]) -> ParseResult {
                 content_length = new_len;
                 has_content_length = true;
             }
-            if name.eq_ignore_ascii_case("transfer-encoding")
-                && value
+            if name.eq_ignore_ascii_case("transfer-encoding") {
+                has_te = true;
+                if value
                     .split(',')
                     .any(|enc| enc.trim().eq_ignore_ascii_case("chunked"))
-            {
-                is_chunked = true;
+                {
+                    is_chunked = true;
+                }
             }
             headers.push((name, value));
         }
     }
 
-    if is_chunked && has_content_length {
+    // RFC 7230 Section 3.3.3: ANY Transfer-Encoding with Content-Length must
+    // be rejected, not just chunked.  Non-framing TE values (gzip, deflate,
+    // identity) can cause upstream servers to interpret body boundaries
+    // differently than this proxy, enabling request smuggling.
+    if has_te && has_content_length {
         return ParseResult::Invalid(
             "Request contains both Transfer-Encoding and Content-Length headers".to_string(),
         );
@@ -577,8 +584,11 @@ mod tests {
     }
 
     /// SEC: Transfer-Encoding substring match must not match partial tokens.
+    /// "chunkedx" is not "chunked", so it must not trigger chunked decoding.
+    /// However, it IS still a Transfer-Encoding header, so combined with
+    /// Content-Length it must be rejected per RFC 7230 Section 3.3.3.
     #[test]
-    fn te_substring_not_chunked() {
+    fn te_substring_not_chunked_but_still_rejects_with_cl() {
         let body = r#"{"model":"m","messages":[]}"#;
         let request = format!(
             "POST /v1/chat/completions HTTP/1.1\r\n\
@@ -588,10 +598,27 @@ mod tests {
              \r\n{body}",
             body.len(),
         );
-        let ParseResult::Complete(parsed, _) = try_parse_http_request(request.as_bytes()) else {
-            panic!("expected Complete for non-matching TE with valid CL");
+        assert!(
+            matches!(
+                try_parse_http_request(request.as_bytes()),
+                ParseResult::Invalid(reason)
+                    if reason.contains("Transfer-Encoding")
+                        && reason.contains("Content-Length")
+            ),
+            "Must reject non-chunked TE + CL"
+        );
+    }
+
+    /// SEC: Transfer-Encoding alone (non-chunked, no CL) should not trigger
+    /// chunked decoding — body is treated as zero-length.
+    #[test]
+    fn te_non_chunked_alone_parses_empty_body() {
+        let request =
+            b"POST /v1/chat/completions HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunkedx\r\n\r\n";
+        let ParseResult::Complete(parsed, _) = try_parse_http_request(request) else {
+            panic!("expected Complete for non-chunked TE without CL");
         };
-        assert_eq!(parsed.body.len(), body.len());
+        assert!(parsed.body.is_empty());
     }
 
     // ---- SEC: Content-Length validation ----
@@ -663,6 +690,53 @@ mod tests {
                         && reason.contains("Content-Length")
             ),
             "Must reject request with both TE and CL"
+        );
+    }
+
+    /// SEC: Reject non-chunked TE (gzip) combined with Content-Length.
+    /// RFC 7230 Section 3.3.3 requires rejecting ANY TE + CL combination,
+    /// not just chunked + CL, to prevent body framing ambiguity.
+    #[test]
+    fn reject_te_gzip_with_content_length() {
+        let request = b"POST /v1/chat/completions HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: gzip\r\nContent-Length: 5\r\n\r\nhello";
+        assert!(
+            matches!(
+                try_parse_http_request(request),
+                ParseResult::Invalid(reason)
+                    if reason.contains("Transfer-Encoding")
+                        && reason.contains("Content-Length")
+            ),
+            "Must reject TE: gzip + CL"
+        );
+    }
+
+    /// SEC: Reject TE: identity combined with Content-Length.
+    #[test]
+    fn reject_te_identity_with_content_length() {
+        let request = b"POST /v1/chat/completions HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: identity\r\nContent-Length: 5\r\n\r\nhello";
+        assert!(
+            matches!(
+                try_parse_http_request(request),
+                ParseResult::Invalid(reason)
+                    if reason.contains("Transfer-Encoding")
+                        && reason.contains("Content-Length")
+            ),
+            "Must reject TE: identity + CL"
+        );
+    }
+
+    /// SEC: Reject TE: deflate combined with Content-Length.
+    #[test]
+    fn reject_te_deflate_with_content_length() {
+        let request = b"POST /v1/chat/completions HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: deflate\r\nContent-Length: 5\r\n\r\nhello";
+        assert!(
+            matches!(
+                try_parse_http_request(request),
+                ParseResult::Invalid(reason)
+                    if reason.contains("Transfer-Encoding")
+                        && reason.contains("Content-Length")
+            ),
+            "Must reject TE: deflate + CL"
         );
     }
 }
