@@ -37,16 +37,27 @@ pub struct Router {
 }
 
 impl Router {
-    pub fn new() -> Result<Self, RouterError> {
-        let client = reqwest::Client::builder()
-            .connect_timeout(Duration::from_secs(30))
-            .read_timeout(Duration::from_secs(120))
+    fn build_client(
+        connect_timeout: Duration,
+        read_timeout: Duration,
+    ) -> Result<reqwest::Client, RouterError> {
+        reqwest::Client::builder()
+            .connect_timeout(connect_timeout)
+            .read_timeout(read_timeout)
             .build()
-            .map_err(|e| RouterError::Internal(format!("failed to build HTTP client: {e}")))?;
-        Ok(Self {
+            .map_err(|e| RouterError::Internal(format!("failed to build HTTP client: {e}")))
+    }
+
+    pub fn with_client(client: reqwest::Client) -> Self {
+        Self {
             routes: Vec::new(),
             client,
-        })
+        }
+    }
+
+    pub fn new() -> Result<Self, RouterError> {
+        let client = Self::build_client(Duration::from_secs(30), Duration::from_secs(120))?;
+        Ok(Self::with_client(client))
     }
 
     pub fn from_config(config: &RouterConfig) -> Result<Self, RouterError> {
