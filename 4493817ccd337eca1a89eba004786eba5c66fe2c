@@ -1,0 +1,23 @@
+crates/openshell-router/src/lib.rs
+  b389f81f21f47ebd 42-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "4493817ccd337eca1a89eba004786eba5c66fe2c",
+  "prompts": {
+    "b389f81f21f47ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "08a0813a-79d5-4e6a-a415-3c72d264e0a5",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "areporeporepo <areporeporepo@users.noreply.github.com>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 1,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    }
+  }
+}
