@@ -109,8 +109,26 @@ pub fn try_parse_http_request(buf: &[u8]) -> ParseResult {
         return ParseResult::Incomplete;
     };
     let headers_bytes = &buf[..header_end];
+
+    // Reject bare LF in headers (must use \r\n line endings per RFC 7230).
+    // Bare LF can cause parsing discrepancies between this proxy and upstream
+    // servers, enabling request smuggling via header injection.
+    for i in 0..headers_bytes.len() {
+        if headers_bytes[i] == b'\n' && (i == 0 || headers_bytes[i - 1] != b'\r') {
+            return ParseResult::Invalid(
+                "HTTP headers contain bare LF (line feed without carriage return)".to_string(),
+            );
+        }
+    }
+
+    // Strict UTF-8 validation. Returning Incomplete for invalid UTF-8 would
+    // silently drop the request, but an attacker could exploit the gap between
+    // this proxy (which ignores the request) and an upstream server (which may
+    // accept raw bytes), enabling request smuggling via mutated header names.
     let Ok(header_str) = std::str::from_utf8(headers_bytes) else {
-        return ParseResult::Incomplete;
+        return ParseResult::Invalid(
+            "HTTP headers contain invalid UTF-8".to_string(),
+        );
     };
     let body_start = header_end + 4;
 
@@ -663,6 +681,71 @@ mod tests {
                         && reason.contains("Content-Length")
             ),
             "Must reject request with both TE and CL"
+        );
+    }
+
+    // ---- SEC: Header injection / parsing discrepancy checks ----
+
+    /// SEC: Bare LF in headers enables header injection via parsing discrepancy.
+    /// A proxy that splits on \r\n sees one header, but an upstream that also
+    /// accepts bare \n sees two — enabling request smuggling.
+    #[test]
+    fn reject_bare_lf_in_headers() {
+        let request =
+            b"POST /v1/chat/completions HTTP/1.1\r\nX-Injected: value\nEvil: header\r\nHost: x\r\nContent-Length: 0\r\n\r\n";
+        assert!(
+            matches!(
+                try_parse_http_request(request),
+                ParseResult::Invalid(reason) if reason.contains("bare LF")
+            ),
+            "Must reject headers with bare LF"
+        );
+    }
+
+    /// SEC: Bare LF at the very start of headers.
+    #[test]
+    fn reject_bare_lf_at_start() {
+        let request =
+            b"\nPOST /v1/chat/completions HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\n\r\n";
+        assert!(
+            matches!(
+                try_parse_http_request(request),
+                ParseResult::Invalid(reason) if reason.contains("bare LF")
+            ),
+            "Must reject bare LF at start of headers"
+        );
+    }
+
+    /// SEC: Invalid UTF-8 in headers must be rejected (not silently dropped).
+    /// from_utf8_lossy would replace invalid bytes with U+FFFD, creating an
+    /// interpretation gap between this proxy and upstream servers that receive
+    /// the raw bytes.
+    #[test]
+    fn reject_invalid_utf8_in_headers() {
+        let mut request = Vec::new();
+        request.extend_from_slice(b"POST /v1/chat/completions HTTP/1.1\r\nHost: x\r\nX-Bad: ");
+        request.extend_from_slice(&[0xc0, 0xaf]); // invalid UTF-8
+        request.extend_from_slice(b"\r\nContent-Length: 0\r\n\r\n");
+        assert!(
+            matches!(
+                try_parse_http_request(&request),
+                ParseResult::Invalid(reason) if reason.contains("UTF-8")
+            ),
+            "Must reject headers with invalid UTF-8"
+        );
+    }
+
+    /// SEC: Previously, invalid UTF-8 returned Incomplete (silent drop).
+    /// Verify it now returns Invalid so the proxy actively rejects the request.
+    #[test]
+    fn invalid_utf8_returns_invalid_not_incomplete() {
+        let mut request = Vec::new();
+        request.extend_from_slice(b"POST /v1/chat HTTP/1.1\r\nX: ");
+        request.extend_from_slice(&[0xff, 0xfe]); // invalid UTF-8
+        request.extend_from_slice(b"\r\n\r\n");
+        assert!(
+            matches!(try_parse_http_request(&request), ParseResult::Invalid(_)),
+            "Invalid UTF-8 must return Invalid, not Incomplete"
         );
     }
 }
