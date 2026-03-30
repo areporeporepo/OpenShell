@@ -3,6 +3,10 @@
 
 use openshell_router::Router;
 use openshell_router::config::{AuthHeader, ResolvedRoute, RouteConfig, RouterConfig};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpListener;
+use tokio::task::JoinHandle;
+use tokio::time::{Duration, sleep};
 use wiremock::matchers::{bearer_token, body_partial_json, header, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -16,6 +20,40 @@ fn mock_candidates(base_url: &str) -> Vec<ResolvedRoute> {
         auth: AuthHeader::Bearer,
         default_headers: Vec::new(),
     }]
+}
+
+async fn spawn_chunked_stream_server(idle_gap: Duration) -> (String, JoinHandle<()>) {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let handle = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.unwrap();
+        let mut request = Vec::new();
+        let mut buf = [0_u8; 1024];
+
+        loop {
+            let read = stream.read(&mut buf).await.unwrap();
+            assert!(read > 0, "client closed before sending request headers");
+            request.extend_from_slice(&buf[..read]);
+            if request.windows(4).any(|window| window == b"\r\n\r\n") {
+                break;
+            }
+        }
+
+        stream
+            .write_all(
+                b"HTTP/1.1 200 OK\r\ncontent-type: text/plain\r\ntransfer-encoding: chunked\r\n\r\n5\r\nhello\r\n",
+            )
+            .await
+            .unwrap();
+        stream.flush().await.unwrap();
+
+        sleep(idle_gap).await;
+
+        let _ = stream.write_all(b"5\r\nworld\r\n0\r\n\r\n").await;
+        let _ = stream.flush().await;
+    });
+
+    (format!("http://{addr}"), handle)
 }
 
 #[tokio::test]
@@ -444,6 +482,79 @@ async fn proxy_forwards_client_anthropic_version_header() {
         response.status, 200,
         "upstream should have received anthropic-version header"
     );
+}
+
+#[tokio::test]
+async fn streaming_proxy_survives_long_inter_chunk_gap_with_read_timeout() {
+    let (endpoint, server) = spawn_chunked_stream_server(Duration::from_millis(120)).await;
+    let client = reqwest::Client::builder()
+        .connect_timeout(Duration::from_millis(50))
+        .read_timeout(Duration::from_millis(200))
+        .build()
+        .unwrap();
+    let router = Router::with_client(client);
+    let candidates = mock_candidates(&endpoint);
+
+    let mut response = router
+        .proxy_with_candidates_streaming(
+            "openai_chat_completions",
+            "POST",
+            "/v1/chat/completions",
+            vec![("content-type".to_string(), "application/json".to_string())],
+            bytes::Bytes::from_static(br#"{"messages":[{"role":"user","content":"Hello"}]}"#),
+            &candidates,
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status, 200);
+    assert_eq!(
+        response.next_chunk().await.unwrap(),
+        Some(bytes::Bytes::from_static(b"hello"))
+    );
+
+    let second_chunk = response.next_chunk().await.unwrap();
+    assert_eq!(second_chunk, Some(bytes::Bytes::from_static(b"world")));
+    assert_eq!(response.next_chunk().await.unwrap(), None);
+
+    server.await.unwrap();
+}
+
+#[tokio::test]
+async fn streaming_proxy_times_out_when_inter_chunk_gap_exceeds_read_timeout() {
+    let (endpoint, server) = spawn_chunked_stream_server(Duration::from_millis(250)).await;
+    let client = reqwest::Client::builder()
+        .connect_timeout(Duration::from_millis(50))
+        .read_timeout(Duration::from_millis(200))
+        .build()
+        .unwrap();
+    let router = Router::with_client(client);
+    let candidates = mock_candidates(&endpoint);
+
+    let mut response = router
+        .proxy_with_candidates_streaming(
+            "openai_chat_completions",
+            "POST",
+            "/v1/chat/completions",
+            vec![("content-type".to_string(), "application/json".to_string())],
+            bytes::Bytes::from_static(br#"{"messages":[{"role":"user","content":"Hello"}]}"#),
+            &candidates,
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(
+        response.next_chunk().await.unwrap(),
+        Some(bytes::Bytes::from_static(b"hello"))
+    );
+
+    let err = response.next_chunk().await.unwrap_err();
+    assert!(
+        matches!(err, openshell_router::RouterError::UpstreamProtocol(ref details) if details.contains("failed to read response chunk")),
+        "expected streaming chunk read failure after idle timeout, got: {err:?}"
+    );
+
+    server.await.unwrap();
 }
 
 #[test]

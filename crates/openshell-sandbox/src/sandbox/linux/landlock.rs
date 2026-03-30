@@ -10,7 +10,7 @@ use landlock::{
 };
 use miette::{IntoDiagnostic, Result};
 use std::path::PathBuf;
-use tracing::debug;
+use tracing::{debug, info, warn};
 
 pub fn apply(policy: &SandboxPolicy, workdir: Option<&str>) -> Result<()> {
     let read_only = policy.filesystem.read_only.clone();
@@ -29,8 +29,16 @@ pub fn apply(policy: &SandboxPolicy, workdir: Option<&str>) -> Result<()> {
         return Ok(());
     }
 
+    let abi = ABI::V2;
+    info!(
+        abi = ?abi,
+        compatibility = ?policy.landlock.compatibility,
+        read_only_paths = read_only.len(),
+        read_write_paths = read_write.len(),
+        "Applying Landlock filesystem sandbox"
+    );
+
     let result: Result<()> = (|| {
-        let abi = ABI::V2;
         let access_all = AccessFs::from_all(abi);
         let access_read = AccessFs::from_read(abi);
 
@@ -71,7 +79,11 @@ pub fn apply(policy: &SandboxPolicy, workdir: Option<&str>) -> Result<()> {
             policy.landlock.compatibility,
             LandlockCompatibility::BestEffort
         ) {
-            debug!(error = %err, "Landlock unavailable, continuing without filesystem sandbox");
+            warn!(
+                error = %err,
+                "Landlock filesystem sandbox is UNAVAILABLE — running WITHOUT filesystem restrictions. \
+                 Set landlock.compatibility to 'hard_requirement' to make this a fatal error."
+            );
             return Ok(());
         }
         return Err(err);
