@@ -68,6 +68,29 @@ test_guidance_mentions_restart() {
   assert_output_contains "$INSTALL_OUTPUT" "restart your shell" "mentions shell restart"
 }
 
+test_skip_checksum_env() {
+  printf 'TEST: OPENSHELL_NO_VERIFY=1 skips checksum verification\n'
+
+  _skip_dir="$(mktemp -d)/bin"
+  _skip_output="$(OPENSHELL_NO_VERIFY=1 \
+    OPENSHELL_INSTALL_DIR="$_skip_dir" \
+    SHELL="/bin/sh" \
+    PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+    sh "$INSTALL_SCRIPT" 2>&1)" || {
+    fail "install succeeds with OPENSHELL_NO_VERIFY=1" "exit code: $?"
+    return 1
+  }
+
+  assert_output_contains "$_skip_output" "checksum verification skipped" \
+    "shows checksum skip message"
+
+  if [ -f "$_skip_dir/openshell" ]; then
+    pass "binary installed with checksum skip"
+  else
+    fail "binary installed with checksum skip" "not found at $_skip_dir/openshell"
+  fi
+}
+
 test_no_env_scripts_created() {
   printf 'TEST: no env scripts are created in install dir\n'
 
@@ -100,6 +123,7 @@ test_binary_runs;                 echo ""
 test_guidance_shows_export_path;  echo ""
 test_guidance_mentions_not_on_path; echo ""
 test_guidance_mentions_restart;   echo ""
+test_skip_checksum_env;           echo ""
 test_no_env_scripts_created
 
 print_summary

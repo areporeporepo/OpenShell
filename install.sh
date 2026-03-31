@@ -186,10 +186,10 @@ verify_checksum() {
   _vc_checksums="$2"
   _vc_filename="$3"
 
-  _vc_expected="$(grep "$_vc_filename" "$_vc_checksums" | awk '{print $1}')"
+  _vc_expected="$(awk -v fname="$_vc_filename" '$2 == fname { print $1 }' "$_vc_checksums")"
 
   if [ -z "$_vc_expected" ]; then
-    error "no checksum found for $_vc_filename in checksums file"
+    error "no checksum found for $_vc_filename in checksums file (set OPENSHELL_NO_VERIFY=1 or use --no-verify-checksum to skip)"
   fi
 
   if has_cmd shasum; then
@@ -197,7 +197,7 @@ verify_checksum() {
   elif has_cmd sha256sum; then
     echo "$_vc_expected  $_vc_archive" | sha256sum -c --quiet 2>/dev/null
   else
-    error "sha256sum or shasum is required for checksum verification (install coreutils or set OPENSHELL_NO_VERIFY=1 to skip)"
+    error "sha256sum or shasum is required for checksum verification (install coreutils, set OPENSHELL_NO_VERIFY=1, or use --no-verify-checksum to skip)"
   fi
 }
 
@@ -273,7 +273,7 @@ main() {
         error "checksum verification failed for ${_filename}"
       fi
     else
-      error "failed to download checksums file from ${_checksums_url} (set OPENSHELL_NO_VERIFY=1 to skip verification)"
+      error "failed to download checksums file from ${_checksums_url} (set OPENSHELL_NO_VERIFY=1 or use --no-verify-checksum to skip verification)"
     fi
   fi
 
